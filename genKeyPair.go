@@ -1,11 +1,11 @@
 package main
 
 import (
-    "fmt"
     "crypto/rand"
     "crypto/rsa"
     "crypto/x509"
     "encoding/pem"
+    "fmt"
     "os"
 )
 
