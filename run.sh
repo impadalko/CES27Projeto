@@ -1,0 +1,1 @@
+go run genKeyPair.go && go run sign.go
