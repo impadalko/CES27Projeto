@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/impadalko/CES27Projeto/blockchain"
+	"github.com/impadalko/CES27Projeto/network"
 	"github.com/impadalko/CES27Projeto/sign"
 )
 
@@ -24,6 +25,12 @@ func main() {
 	}
 
 	err = sign.TestSignAndVerify()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = network.TestNode()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

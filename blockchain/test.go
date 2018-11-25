@@ -26,7 +26,7 @@ func TestBlockToStringAndFromString() error {
 		[]byte{11, 22, 33, 44, 55},
 	}
 
-	blockToString := block.ToString()
+	blockToString := block.String()
 
 	blockFromString, err := BlockFromString(blockToString)
 	if err != nil {

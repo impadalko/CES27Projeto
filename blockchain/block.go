@@ -25,11 +25,11 @@ func (block Block) Hash() HashVal {
 	return sha256.Sum256(buffer.Bytes())
 }
 
-func (hashVal HashVal) ToString() string {
+func (hashVal HashVal) String() string {
 	return hex.EncodeToString(hashVal[:])
 }
 
-func (block Block) ToString() string {
+func (block Block) String() string {
 	buffer := bytes.Buffer{}
 	binary.Write(&buffer, binary.LittleEndian, block.Index)
 	binary.Write(&buffer, binary.LittleEndian, block.PreviousHash)
