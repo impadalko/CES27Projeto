@@ -8,7 +8,13 @@ import (
 )
 
 func main() {
-	err := sign.TestWriteKeysToPemFile()
+	err := sign.TestWriteAndReadPemFile()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = sign.TestSignAndVerify()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

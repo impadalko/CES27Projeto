@@ -17,13 +17,32 @@ import (
 
 const KeySizeBits = 2048
 
+/*
+type rsa.PrivateKey struct {
+    rsa.PublicKey            // public part.
+    D         *big.Int   // private exponent
+    Primes    []*big.Int // prime factors of N, has >= 2 elements.
+}
+
+type rsa.PublicKey struct {
+    N *big.Int // modulus
+    E int      // public exponent
+}
+
+type pem.Block struct {
+    Type    string            // The type, taken from the preamble (i.e. "RSA PRIVATE KEY").
+    Headers map[string]string // Optional headers.
+    Bytes   []byte            // The decoded bytes of the contents. Typically a DER encoded ASN.1 structure.
+}
+*/
+
 type PrivateKey rsa.PrivateKey
 type PublicKey  rsa.PublicKey
 
 func GenerateKey() (*PrivateKey, error) {
+    // func rsa.GenerateKey(random io.Reader, bits int) (*rsa.PrivateKey, error)
     rsaPrivKey, err := rsa.GenerateKey(rand.Reader, KeySizeBits)
-    privKey := (*PrivateKey)(rsaPrivKey) // solve type-checker complaint
-    return privKey, err
+    return (*PrivateKey)(rsaPrivKey), err
 }
 
 func (privKey *PrivateKey) GetPublicKey() *PublicKey {
@@ -35,20 +54,26 @@ func (privKey *PrivateKey) WriteToPemFile(filename string) error {
     if err != nil {
         return err
     }
-    rsaPrivKey := (*rsa.PrivateKey)(privKey) // solve type-checker complaint
+
+    // func x509.MarshalPKCS1PrivateKey(key *rsa.PrivateKey) []byte
+    bytes := x509.MarshalPKCS1PrivateKey((*rsa.PrivateKey)(privKey))
+
+    // func pem.Encode(out io.Writer, b *pem.Block) error
     err = pem.Encode(PrivKeyFile,
         &pem.Block{
             Type: "RSA PRIVATE KEY",
-            Bytes: x509.MarshalPKCS1PrivateKey(rsaPrivKey),
+            Bytes: bytes,
         },
     )
     if err != nil {
         return err
     }
+
     err = PrivKeyFile.Close()
     if err != nil {
         return err
     }
+
     return nil
 }
 
@@ -57,20 +82,26 @@ func (pubKey *PublicKey) WriteToPemFile(filename string) error {
     if err != nil {
         return err
     }
-    rsaPubKey := (*rsa.PublicKey)(pubKey) // solve type-checker complaint
+
+    // func x509.MarshalPKCS1PublicKey(key *rsa.PublicKey) []byte
+    bytes := x509.MarshalPKCS1PublicKey((*rsa.PublicKey)(pubKey))
+
+    // func pem.Encode(out io.Writer, b *pem.Block) error
     err = pem.Encode(PubKeyFile,
         &pem.Block{
             Type: "RSA PUBLIC KEY",
-            Bytes: x509.MarshalPKCS1PublicKey(rsaPubKey),
+            Bytes: bytes,
         },
     )
     if err != nil {
         return err
     }
+
     err = PubKeyFile.Close()
     if err != nil {
         return err
     }
+
     return nil
 }
 
@@ -87,11 +118,13 @@ func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
         return nil, err
     }
 
-    pem, remaining := pem.Decode(bytes)
-    if pem == nil || pem.Type != "RSA PRIVATE KEY" || len(remaining) > 0 {
+    // func pem.Decode(data []byte) (p *pem.Block, rest []byte)
+    pem, rest := pem.Decode(bytes)
+    if pem == nil || pem.Type != "RSA PRIVATE KEY" || len(rest) != 0 {
         return nil, &DecodeKeyError{}
     }
 
+    // func x509.ParsePKCS1PrivateKey(der []byte) (*rsa.PrivateKey, error)
     rsaPrivKey, err := x509.ParsePKCS1PrivateKey(pem.Bytes)
     if err != nil {
         return nil, err
@@ -106,76 +139,17 @@ func PublicKeyFromPemFile(filename string) (*PublicKey, error) {
         return nil, err
     }
 
-    pem, remaining := pem.Decode(bytes)
-    if pem == nil || pem.Type != "RSA PUBLIC KEY" || len(remaining) > 0 {
+    // func pem.Decode(data []byte) (p *pem.Block, rest []byte)
+    pem, rest := pem.Decode(bytes)
+    if pem == nil || pem.Type != "RSA PUBLIC KEY" || len(rest) != 0 {
         return nil, &DecodeKeyError{}
     }
 
+    // func x509.ParsePKCS1PublicKey(der []byte) (*rsa.PublicKey, error)
     rsaPubKey, err := x509.ParsePKCS1PublicKey(pem.Bytes)
     if err != nil {
         return nil, err
     }
 
     return (*PublicKey)(rsaPubKey), nil
-}
-
-type TestError struct {
-    msg string
-}
-
-func (err *TestError) Error() string {
-    return err.msg
-}
-
-/*
-type rsa.PrivateKey struct {
-    rsa.PublicKey            // public part.
-    D         *big.Int   // private exponent
-    Primes    []*big.Int // prime factors of N, has >= 2 elements.
-}
-
-type rsa.PublicKey struct {
-    N *big.Int // modulus
-    E int      // public exponent
-}
-*/
-
-func TestWriteKeysToPemFile() error {
-	privKey, err := GenerateKey()
-	if err != nil {
-		return err
-	}
-	pubKey := privKey.GetPublicKey()
-	
-	err = privKey.WriteToPemFile("priv_key.pem")
-	if err != nil {
-		return err
-	}
-
-	err = pubKey.WriteToPemFile("pub_key.pem")
-	if err != nil {
-		return err
-    }
-
-    readPrivKey, err := PrivateKeyFromPemFile("priv_key.pem")
-    if err != nil {
-		return err
-    }
-
-    if readPrivKey.D.Cmp(privKey.D) != 0 ||
-        readPrivKey.PublicKey.N.Cmp(privKey.PublicKey.N) != 0 ||
-        readPrivKey.PublicKey.E != privKey.PublicKey.E {
-        return &TestError{"Error reading private key from file"}
-    }
-
-    readPubKey, err := PublicKeyFromPemFile("pub_key.pem")
-    if err != nil {
-		return err
-    }
-
-    if readPubKey.N.Cmp(pubKey.N) != 0 || readPubKey.E != pubKey.E {
-        return &TestError{"Error reading public key from file"}
-    }
-
-    return nil
 }
