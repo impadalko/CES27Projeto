@@ -52,11 +52,17 @@ func NewNode(id string) *Node {
 	return &node
 }
 
-func (node *Node) Start() error {
-	err := node.Listen()
+func (node *Node) Listen() error {
+	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
 	}
+	node.Listener = listener
+	node.Addr = listener.Addr().String()
+	return nil
+}
+
+func (node *Node) Start() error {
 	for {
 		conn, err := node.AcceptConnection()
 		if err != nil {
@@ -81,16 +87,7 @@ func (node *Node) StartHandleConnection(conn net.Conn) {
 			go node.StartHandleConnection(newConn)
 		}
 	}
-}
-
-func (node *Node) Listen() error {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return err
-	}
-	node.Listener = listener
-	node.Addr = listener.Addr().String()
-	return nil
+	CleanupConnection(conn)
 }
 
 func (node *Node) AcceptConnection() (net.Conn, error) {
