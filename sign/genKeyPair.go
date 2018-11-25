@@ -1,4 +1,4 @@
-package main
+package sign
 
 import (
     "fmt"
@@ -35,7 +35,7 @@ type PublicKey struct {
 }
 */
 
-func main() {
+func genTest() {
     // Generate public and private key pair
     // func GenerateKey(random io.Reader, bits int) (*PrivateKey, error)
     PrivKey, err := rsa.GenerateKey(rand.Reader, 1024)

@@ -1,7 +1,7 @@
 // Implementation of a network of symmetrical peers that can start, join or leave a network.
 // The network is designed to be fully connected, that is, all peer connected to each other.
 
-package main
+package network
 
 import (
 	"fmt"
@@ -10,24 +10,9 @@ import (
 	"bufio"
 	"strings"
 	"sync"
-)
 
-/* RANDOM STRING GENERATOR */
-import (
-	"math/rand"
-	"time"
+	"github.com/impadalko/CES27Projeto/util"
 )
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-var alphabet []rune = []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_")
-func RandomString(length int) string {
-	res := make([]rune, length)
-	for i := range res {
-		res[i] = alphabet[rand.Intn(len(alphabet))]
-	}
-	return string(res)
-}
 
 /* GLOBAL VARIABLES */
 
@@ -55,7 +40,7 @@ var ConnsLock = sync.RWMutex{}
 /* MAIN PROGRAM */
 
 func main() {
-	MyId = RandomString(8)
+	MyId = util.RandomString(8)
 	fmt.Printf("MyId=%s\n", MyId)
 
 	listener, err := net.Listen("tcp", ":0")

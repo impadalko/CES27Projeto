@@ -1,4 +1,4 @@
-package main
+package sign
 
 import (
     "fmt"
@@ -29,7 +29,7 @@ type Transaction struct {
     Data string
 }
 
-func checkError(err error) {
+func CheckError(err error) {
     if err != nil {
         fmt.Println("An error occurred! Please try again!")
         os.Exit(1)
@@ -44,34 +44,34 @@ type Block struct {
 }
 */
 
-func main(){
+func signTest() {
     // Read private key file and parse it
     // TODO: Pass private key file as argument
     privKeyBytes, err := ioutil.ReadFile("rsa_priv.pem")
-    checkError(err)
+    CheckError(err)
     privKeyPem, _ := pem.Decode(privKeyBytes)
     if privKeyPem == nil || privKeyPem.Type != "RSA PRIVATE KEY" {
         fmt.Println("Unable to find the private key");
         os.Exit(1);
     }
     privKey, err := x509.ParsePKCS1PrivateKey(privKeyPem.Bytes)
-    checkError(err)
+    CheckError(err)
 
     // Sign the struct
     // TODO: Think on how get the transaction (query the miner?)
     payload, err := json.Marshal(Transaction{ Data: "test" })
-    checkError(err)
+    CheckError(err)
     hashed := sha256.Sum256(payload)
 
     // func SignPKCS1v15(rand io.Reader, priv *PrivateKey, hash crypto.Hash, hashed []byte) ([]byte, error)
     signature, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hashed[:])
-    checkError(err)
+    CheckError(err)
 
     fmt.Println("Data signed sucessfully\n")
     fmt.Printf("Signature: %x\n\n", signature)
 
     pubKeyData, err := ioutil.ReadFile("rsa_pub.pem")
-    checkError(err)
+    CheckError(err)
     
     pubKeyPem, _ := pem.Decode(pubKeyData)
     if pubKeyPem == nil {
@@ -80,7 +80,7 @@ func main(){
     }
 
     pubKey, err := x509.ParsePKCS1PublicKey(pubKeyPem.Bytes)
-    checkError(err)
+    CheckError(err)
 
     // func VerifyPKCS1v15(pub *PublicKey, hash crypto.Hash, hashed []byte, sig []byte) error
     err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], signature)
