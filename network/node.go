@@ -12,9 +12,16 @@ import (
 )
 
 type Peer struct {
-	Id   string
-	Addr string
-	Conn net.Conn
+	Id     string
+	Addr   string
+	Conn   net.Conn
+}
+
+type ConnInfo struct {
+	PeerId     string        // the empty string is used when the peerId has not been resolved yet
+	PeerAddr   string        // the empty string is used when the peerAddr has not been resolved yet
+	Conn       net.Conn
+	Reader     *bufio.Reader
 }
 
 type Node struct {
@@ -26,9 +33,8 @@ type Node struct {
 	Peers     map[string]Peer
 	PeersLock sync.RWMutex
 
-	// map: conn net.Conn => peerId string | ""
-	// the empty string is used as the peerId when the peerId has not been resolved yet
-	Conns     map[net.Conn]string
+	// map: conn net.Conn => conn Conn
+	Conns     map[net.Conn]*ConnInfo
 	ConnsLock sync.RWMutex
 
 	// the native map implementation in Go is not thread-safe.
@@ -41,7 +47,7 @@ func NewNode(id string) *Node {
 	node.Id        = id
 	node.Peers     = map[string]Peer{}
 	node.PeersLock = sync.RWMutex{}
-	node.Conns     = map[net.Conn]string{}
+	node.Conns     = map[net.Conn]*ConnInfo{}
 	node.ConnsLock = sync.RWMutex{}
 	return &node
 }
@@ -56,23 +62,12 @@ func (node *Node) Start() error {
 	return nil
 }
 
-func (node *Node) Close() {
-	node.Listener.Close()
-}
-
 func (node *Node) AcceptConnection() (net.Conn, error) {
 	return node.Listener.Accept()
 }
 
-func (node *Node) AcceptConnections() {
-	for {
-		conn, err := node.AcceptConnection()
-		if err != nil {
-			// TODO handle asynchronous errors somehow
-			continue
-		}
-		go node.HandleConnection(conn)
-	}
+func (node *Node) Close() error {
+	return node.Listener.Close()
 }
 
 type ProtocolError struct {
@@ -84,52 +79,50 @@ func (err *ProtocolError) Error() string {
 	return fmt.Sprintf("%s: %s", err.code, err.msg)
 }
 
-// may return a new connection that must me handled
-func (node *Node) HandleMessage(conn net.Conn, connPeerId *string, connPeerAddr *string, line string) (*net.Conn, error) {
+// may return a new connection that must be handled
+func (node *Node) HandleMessage(connInfo *ConnInfo, message string) (*net.Conn, error) {
 	// received message
-	line = strings.TrimSpace(line)
-	split := strings.Split(line, " ")
+	message = strings.TrimSpace(message)
+	split := strings.Split(message, " ")
 
 	if len(split) == 3 && split[0] == "REQUEST" {
 		// the other peer is requesting the current node to add it as peer
 
-		*connPeerId = split[1]
-		*connPeerAddr = split[2]
-		node.ConnSet(conn, *connPeerId)
+		connInfo.PeerId = split[1]
+		connInfo.PeerAddr = split[2]
 
-		if *connPeerId == node.Id {
-			conn.Close()
+		if connInfo.PeerId == node.Id {
+			connInfo.Conn.Close()
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
 		} else {
-			_, ok := node.PeerGet(*connPeerId)
+			_, ok := node.PeerGet(connInfo.PeerId)
 			if ok {
-				conn.Close()
+				connInfo.Conn.Close()
 				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
 			} else {
 				// accept requesting peer as peer
-				node.PeerSet(*connPeerId, Peer{*connPeerId, *connPeerAddr, conn})
-				fmt.Fprintf(conn, "ACCEPTED %s %s\n", node.Id, node.Addr)
+				node.PeerSet(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
+				fmt.Fprintf(connInfo.Conn, "ACCEPTED %s %s\n", node.Id, node.Addr)
 				return nil, nil
 			}
 		}
 	} else if len(split) == 3 && split[0] == "ACCEPTED" {
 		// the other peer accepted the current node as a peer
 		
-		*connPeerId = split[1]
-		*connPeerAddr = split[2]
-		node.ConnSet(conn, *connPeerId)
+		connInfo.PeerId = split[1]
+		connInfo.PeerAddr = split[2]
 
-		if *connPeerId == node.Id {
-			conn.Close()
+		if connInfo.PeerId == node.Id {
+			connInfo.Conn.Close()
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
 		} else {
-			_, ok := node.PeerGet(*connPeerId)
+			_, ok := node.PeerGet(connInfo.PeerId)
 			if ok {
-				conn.Close()
+				connInfo.Conn.Close()
 				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
 			} else {
 				// add accepting peer as peer
-				node.PeerSet(*connPeerId, Peer{*connPeerId, *connPeerAddr, conn})
+				node.PeerSet(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
 				return nil, nil
 			}
 		}
@@ -138,10 +131,10 @@ func (node *Node) HandleMessage(conn net.Conn, connPeerId *string, connPeerAddr 
 
 		node.PeersLock.RLock()
 		for _, peer := range node.Peers {
-			if peer.Id == *connPeerId {
+			if peer.Id == connInfo.PeerId {
 				continue
 			}
-			fmt.Fprintf(conn, "PEER %s %s\n", peer.Id, peer.Addr)
+			fmt.Fprintf(connInfo.Conn, "PEER %s %s\n", peer.Id, peer.Addr)
 		}
 		node.PeersLock.RUnlock()
 		return nil, nil
@@ -173,35 +166,39 @@ func (node *Node) HandleMessage(conn net.Conn, connPeerId *string, connPeerAddr 
 	return nil, &ProtocolError{"InvalidMessage", "The message is invalid"}
 }
 
-// connections handled concurrently to each other and stay open during the lifetime of the newtork
-func (node *Node) HandleConnection(conn net.Conn) {
-	// allows to print a list of connections
-	node.ConnSet(conn, "")
+// connections are handled concurrently to each other and stay open during the lifetime of the newtork
+func (node *Node) HandleConnection(conn net.Conn) *ConnInfo {
+	connInfo := ConnInfo{}
+	connInfo.Conn = conn
 
-	// Id and Addr of the peer on the other side of the connection, if it is known
-	connPeerId := ""
-	connPeerAddr := ""
+	// allows to get a list of connections
+	node.ConnSet(conn, &connInfo)
 
 	// the protocol of communication bewteen peers is in plain-text format,
 	// with newlines '\n' at the end of each message
-	reader := bufio.NewReader(conn)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		node.HandleMessage(conn, &connPeerId, &connPeerAddr, line)
+	connInfo.Reader = bufio.NewReader(conn)
+
+	return &connInfo
+}
+
+func (node *Node) ReadNextMessage(connInfo *ConnInfo) (string, error) {
+	line, err := connInfo.Reader.ReadString('\n')
+	if err != nil {
+		return "", err
 	}
-	// Connection closed
-	node.ConnDelete(conn)
-	node.PeerDelete(connPeerId)
+	return line, nil
+}
+
+func (node *Node) CleanupConnection(connInfo *ConnInfo) {
+	node.PeerDelete(connInfo.PeerId)
+	node.ConnDelete(connInfo.Conn)
 }
 
 /* SYNCHRONIZED OPERATIONS ON MAPS */
 
-func (node *Node) ConnSet(conn net.Conn, peerId string) {
+func (node *Node) ConnSet(conn net.Conn, connInfo *ConnInfo) {
 	node.ConnsLock.Lock()
-	node.Conns[conn] = peerId
+	node.Conns[conn] = connInfo
 	node.ConnsLock.Unlock()
 }
 
@@ -236,8 +233,8 @@ func (node *Node) PeerDelete(peerId string) {
 
 /* NODE CONTROL */
 
-// may return a new connection that must me handled
-func (node *Node) JoinPeer(peerAddr string) (*net.Conn, error) {
+// may return a new connection that must be handled
+func (node *Node) JoinNetwork(peerAddr string) (net.Conn, error) {
 	// the current peer will request to join the network of the target peer
 
 	conn, err := net.Dial("tcp", peerAddr)
@@ -246,7 +243,7 @@ func (node *Node) JoinPeer(peerAddr string) (*net.Conn, error) {
 	} else {
 		fmt.Fprintf(conn, "REQUEST %s %s\n", node.Id, node.Addr)
 		fmt.Fprintf(conn, "LIST\n")
-		return &conn, nil
+		return conn, nil
 	}
 }
 
@@ -262,20 +259,15 @@ func (node *Node) GetPeers() []Peer {
 	return peers
 }
 
-type ConnInfo struct {
-	LocalAddr  string
-	RemoteAddr string
-	PeerId     string
-}
-
-func (node *Node) GetConns() []ConnInfo {
+/*func (node *Node) GetConns() []ConnInfo {
 	node.ConnsLock.RLock()
 	conns := make([]ConnInfo, len(node.Conns))
 	i := 0
-	for conn, peerId := range node.Conns {
-		conns[i] = ConnInfo{conn.LocalAddr().String(), conn.RemoteAddr().String(), peerId}
+	for conn, connInfo := range node.Conns {
+		conns[i] = *connInfo
+		conns[i].reader = nil
 		i++
 	}
 	node.ConnsLock.RUnlock()
 	return conns
-}
+}*/

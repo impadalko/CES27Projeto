@@ -29,8 +29,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	err = network.TestNode()
+	
+	err = network.TestNodeJoinNetwork()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
