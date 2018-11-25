@@ -10,9 +10,14 @@ type BlockChain struct {
 	Blocks    []block.Block
 }
 
-func New(timestamp int64) BlockChain {
-	genesis := block.Block{}
-	genesis.Timestamp = timestamp
+func New(timestamp int64, GenesisData []byte) BlockChain {
+	genesis := block.Block{
+		0,
+		block.HashVal{},
+		timestamp,
+		int32(len(GenesisData)),
+		GenesisData,
+	}
 
 	bc := BlockChain{}
 	bc.LastHash = genesis.Hash()

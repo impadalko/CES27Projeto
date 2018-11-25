@@ -2,22 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/impadalko/CES27Projeto/blockchain"
-	"github.com/impadalko/CES27Projeto/blockchain/block"
-	//"github.com/impadalko/CES27Projeto/util"
+	"github.com/impadalko/CES27Projeto/sign"
 )
 
 func main() {
-	bc := blockchain.New(0xFFFF)
-	bc.AddBlock(0xFFFF, []byte{16, 32, 64})
-
-	for _, b := range bc.Blocks {
-		serial := b.ToString()
-		fmt.Println(serial)
-		fmt.Println()
-		b2, _ := block.FromString(serial)
-		fmt.Println(b2.ToString())
-		fmt.Println()
+	err := sign.TestWriteKeysToPemFile()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+
+	fmt.Println("ALL TESTS PASSED")
 }
