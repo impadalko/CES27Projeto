@@ -1,19 +1,15 @@
 package blockchain
 
-import (
-	"github.com/impadalko/CES27Projeto/blockchain/block"
-)
-
 type BlockChain struct {
 	NextIndex int64
-	LastHash  block.HashVal
-	Blocks    []block.Block
+	LastHash  HashVal
+	Blocks    []Block
 }
 
 func New(timestamp int64, GenesisData []byte) BlockChain {
-	genesis := block.Block{
+	genesis := Block{
 		0,
-		block.HashVal{},
+		HashVal{},
 		timestamp,
 		int32(len(GenesisData)),
 		GenesisData,
@@ -27,7 +23,7 @@ func New(timestamp int64, GenesisData []byte) BlockChain {
 }
 
 func (bc *BlockChain) AddBlock(timestamp int64, Data []byte) {
-	block := block.Block{
+	block := Block{
 		bc.NextIndex,
 		bc.LastHash,
 		timestamp,

@@ -1,4 +1,4 @@
-package block
+package blockchain
 
 import (
 	"crypto/sha256"
@@ -39,7 +39,7 @@ func (block Block) ToString() string {
 	return hex.EncodeToString(buffer.Bytes())
 }
 
-func FromString(str string) (Block, error) {
+func BlockFromString(str string) (Block, error) {
 	block := Block{}
 
 	bin, err := hex.DecodeString(str)
