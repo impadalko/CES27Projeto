@@ -17,12 +17,12 @@ func TestNodeJoinNetwork() error {
 	nodeA := NewNode("A")
 	nodeB := NewNode("B")
 
-	err := nodeA.Start()
+	err := nodeA.Listen()
 	if err != nil {
 		return err
 	}
 
-	err = nodeB.Start()
+	err = nodeB.Listen()
 	if err != nil {
 		return err
 	}

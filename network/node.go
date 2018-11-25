@@ -53,6 +53,37 @@ func NewNode(id string) *Node {
 }
 
 func (node *Node) Start() error {
+	err := node.Listen()
+	if err != nil {
+		return err
+	}
+	for {
+		conn, err := node.AcceptConnection()
+		if err != nil {
+			return err
+		}
+		go node.StartHandleConnection(conn)
+	}
+}
+
+func (node *Node) StartHandleConnection(conn net.Conn) {
+	connInfo := node.HandleConnection(conn)
+	for {
+		msg, err := node.ReadNextMessage(connInfo)
+		if err != nil {
+			break
+		}
+		newConn, err := node.HandleMessage(connInfo, msg)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if err == nil && newConn != nil {
+			go node.StartHandleConnection(newConn)
+		}
+	}
+}
+
+func (node *Node) Listen() error {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
@@ -80,7 +111,7 @@ func (err *ProtocolError) Error() string {
 }
 
 // may return a new connection that must be handled
-func (node *Node) HandleMessage(connInfo *ConnInfo, message string) (*net.Conn, error) {
+func (node *Node) HandleMessage(connInfo *ConnInfo, message string) (net.Conn, error) {
 	// received message
 	message = strings.TrimSpace(message)
 	split := strings.Split(message, " ")
@@ -158,7 +189,7 @@ func (node *Node) HandleMessage(connInfo *ConnInfo, message string) (*net.Conn, 
 					return nil, &ProtocolError{"FailConnect", "Failed to connect to peer"}
 				} else {
 					fmt.Fprintf(conn, "REQUEST %s %s\n", node.Id, node.Addr)
-					return &conn, nil
+					return conn, nil
 				}
 			}
 		}
