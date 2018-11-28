@@ -27,7 +27,7 @@ func TestNodeJoinNetwork() error {
 		return err
 	}
 
-	nodeBConn, err := nodeB.JoinNetwork(nodeA.Addr)
+	nodeBConn, err := nodeB.JoinNetwork(nodeA.NodeAddr)
 	if err != nil {
 		return err
 	}

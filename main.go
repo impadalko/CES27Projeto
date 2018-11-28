@@ -17,9 +17,9 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println("NodeId:  ", node.Id)
-	fmt.Println("NodeAddr:", node.Addr)
-	ftm.Println()
+	fmt.Println("NodeId:  ", node.NodeId)
+	fmt.Println("NodeAddr:", node.NodeAddr)
+	fmt.Println()
 	
 	if len(os.Args) == 2 {
 		peerAddr := os.Args[1]
