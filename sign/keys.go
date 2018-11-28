@@ -1,5 +1,8 @@
 package sign
 
+// Functions for public and private RSA key generation, besides writing and reading
+// of such keys from files in a encoded way
+
 import (
     "os"
     "io/ioutil"
@@ -12,6 +15,8 @@ import (
 
     // Serialize public and private keys to text format
     "crypto/x509"
+
+    // PEM = Privacy Enhanced Mail
     "encoding/pem"
 )
 
@@ -39,16 +44,19 @@ type pem.Block struct {
 type PrivateKey rsa.PrivateKey
 type PublicKey  rsa.PublicKey
 
+// Generates RSA private key with size @KeySizeBits
 func GenerateKey() (*PrivateKey, error) {
     // func rsa.GenerateKey(random io.Reader, bits int) (*rsa.PrivateKey, error)
     rsaPrivKey, err := rsa.GenerateKey(rand.Reader, KeySizeBits)
     return (*PrivateKey)(rsaPrivKey), err
 }
 
+// Retrieves RSA public key from given @privKey
 func (privKey *PrivateKey) GetPublicKey() *PublicKey {
     return (*PublicKey)(&privKey.PublicKey)
 }
 
+// Writes encoded @privKey into a file with name @filename
 func (privKey *PrivateKey) WriteToPemFile(filename string) error {
     PrivKeyFile, err := os.Create(filename)
     if err != nil {
@@ -77,6 +85,7 @@ func (privKey *PrivateKey) WriteToPemFile(filename string) error {
     return nil
 }
 
+// Writes encoded @pubKey into a file with name @filename
 func (pubKey *PublicKey) WriteToPemFile(filename string) error {
     PubKeyFile, err := os.Create(filename)
     if err != nil {
@@ -112,6 +121,7 @@ func (err *DecodeKeyError) Error() string {
     return "Error decoding PEM key"
 }
 
+// Retrieves encoded @privKey from file with name @filename
 func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
@@ -133,6 +143,7 @@ func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
     return (*PrivateKey)(rsaPrivKey), nil
 }
 
+// Retrieves encoded @pubKey from file with name @filename
 func PublicKeyFromPemFile(filename string) (*PublicKey, error) {
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
