@@ -87,7 +87,7 @@ func (node *Node) StartHandleConnection(conn net.Conn) {
 			go node.StartHandleConnection(newConn)
 		}
 	}
-	CleanupConnection(conn)
+	node.CleanupConnection(connInfo)
 }
 
 func (node *Node) AcceptConnection() (net.Conn, error) {
