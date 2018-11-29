@@ -33,7 +33,7 @@ func main() {
 	} else {
 		for i := 0; i < 10; i++ {
 			b := byte(i)
-			node.blockChain.AddBlockFromData(util.Now(), []byte{ b, b * 10 })
+			node.BlockChain.AddBlockFromData(util.Now(), []byte{ b, b * 10 })
 		}
 	}
 

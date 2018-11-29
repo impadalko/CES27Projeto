@@ -12,19 +12,13 @@ type BlockChain struct {
 }
 
 func New(timestamp int64, Data []byte) BlockChain {
-	block := Block{
+	return NewFromBlock(Block{
 		0,
 		HashVal{},
 		timestamp,
 		int32(len(Data)),
 		Data,
-	}
-
-	bc := BlockChain{}
-	bc.LastHash = block.Hash()
-	bc.Blocks = append(bc.Blocks, block)
-	bc.NextIndex = 1
-	return bc
+	})
 }
 
 func NewFromBlock(block Block) BlockChain {
@@ -37,16 +31,13 @@ func NewFromBlock(block Block) BlockChain {
 }
 
 func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) {
-	block := Block{
+	bc.AddBlock(Block{
 		bc.NextIndex,
 		bc.LastHash,
 		timestamp,
 		int32(len(Data)),
 		Data,
-	}
-	bc.Blocks = append(bc.Blocks, block)
-	bc.NextIndex++
-	bc.LastHash = block.Hash()
+	})
 }
 
 func (bc *BlockChain) AddBlock(block Block) error {

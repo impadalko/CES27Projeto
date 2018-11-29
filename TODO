@@ -1,12 +1,12 @@
-* protocolo acrescentar pedir blockchain
+x protocolo acrescentar pedir blockchain
 
-* protocolo acrescentar responder com blockchain
+x protocolo acrescentar responder com blockchain
 
-* colocar blockchain no nó
+x colocar blockchain no nó
 
 * enviar novos blocos para a rede
 
-* receber novos blocos da rede (vericando)
+x receber novos blocos da rede (vericando)
 
 * resolver conflitos quando nó estiver defasado
 
