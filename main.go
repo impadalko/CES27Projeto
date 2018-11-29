@@ -20,11 +20,10 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println("NodeId:  ", node.NodeId())
-	fmt.Println("NodeAddr:", node.NodeAddr())
-	fmt.Println()
+	node.PrintInfo()
 	
 	if len(os.Args) == 2 {
+		// connect to another peer and join its network
 		peerAddr := os.Args[1]
 		conn, err := node.JoinNetwork(peerAddr)
 		if err != nil {
@@ -46,43 +45,26 @@ func main() {
 		fmt.Println()
 		text = strings.TrimSpace(text)
 		split := strings.Split(text, " ")
+
 		if len(split) == 0 {
+			fmt.Println("Invalid command")
+			fmt.Println()
 			continue
 		}
+
 		command := split[0]
 
 		if command == "info" {
 
-			fmt.Println("NodeId:  ", node.NodeId())
-			fmt.Println("NodeAddr:", node.NodeAddr())
-			fmt.Println()
+			node.PrintInfo()
 
 		} else if command == "peers" {
 
-			if len(node.Network.Peers) == 0 {
-				fmt.Println("No Peers")
-				fmt.Println()
-			} else {
-				fmt.Printf("%-10s %s\n", "PeerId", "PeerAddr")
-				for _, peer := range node.Network.Peers {
-					fmt.Printf("%-10s %s\n", peer.Id, peer.Addr)
-				}
-				fmt.Println()
-			}
+			node.PrintPeers()
 
 		} else if command == "conns" {
 
-			if len(node.Network.Conns) == 0 {
-				fmt.Println("No Connections")
-				fmt.Println()
-			} else {
-				fmt.Printf("%-22s %-22s %-10s %s\n", "RemoteAddr", "LocalAddr", "PeerId", "PeerAddr")
-				for _, conn := range node.Network.Conns {
-					fmt.Printf("%-22s %-22s %-10s %s\n",
-						conn.Conn.RemoteAddr().String(), conn.Conn.LocalAddr().String(), conn.PeerId, conn.PeerAddr)
-				}
-				fmt.Println()
-			}
+			node.PrintConns()
 
 		} else if command == "blocks" {
 
@@ -91,8 +73,7 @@ func main() {
 		} else if len(split) >= 2 && command == "add" {
 
 			message := strings.Join(split[1:], " ")
-			node.BlockChain.AddBlockFromData(util.Now(), []byte(message))
-
+			node.AddBlockFromData(util.Now(), []byte(message))
 			node.PrintBlocks()
 
 		} else if len(split) == 2 && command == "broadcast" {
@@ -101,7 +82,10 @@ func main() {
 			if err == nil {
 				block := node.BlockChain.GetBlock(blockIndex)
 				message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
-				node.Network.Broadcast(message)
+				node.Broadcast(message)
+			} else {
+				fmt.Println("Invalid command")
+				fmt.Println()
 			}
 
 		} else {

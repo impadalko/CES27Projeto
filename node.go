@@ -12,7 +12,7 @@ type Node struct {
 	BlockChain *blockchain.BlockChain
 }
 
-var node Node // find some way to share the node between handlers without global...
+var node Node // FIXME find some way to share the node between handlers without global...
 
 func NewNode(nodeId string, timestamp int64) *Node {
 	node = Node{
@@ -36,7 +36,7 @@ func HandleRequestBlockchain(connInfo *network.ConnInfo, args []string) {
 
 func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 	// FIXME node.BlockChain must be handled with mutexes
-	
+
 	// the peer sent a block to be added to the blockchain of the current node
 	block, err := blockchain.BlockFromString(args[1])
 	if err != nil {
@@ -76,16 +76,53 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 	}
 }
 
+func (node *Node) PrintInfo() {
+	fmt.Println("NodeId:  ", node.Network.NodeId)
+	fmt.Println("NodeAddr:", node.Network.NodeAddr)
+	fmt.Println()
+}
+
+func (node *Node) PrintPeers() {
+	node.Network.PeersLock.RLock()
+	if len(node.Network.Peers) == 0 {
+		fmt.Println("No Peers")
+		fmt.Println()
+	} else {
+		fmt.Printf("%-10s %s\n", "PeerId", "PeerAddr")
+		for _, peer := range node.Network.Peers {
+			fmt.Printf("%-10s %s\n", peer.Id, peer.Addr)
+		}
+		fmt.Println()
+	}
+	node.Network.PeersLock.RUnlock()
+}
+
+func (node *Node) PrintConns() {
+	node.Network.ConnsLock.RLock()
+	if len(node.Network.Conns) == 0 {
+		fmt.Println("No Connections")
+		fmt.Println()
+	} else {
+		fmt.Printf("%-22s %-22s %-10s %s\n", "RemoteAddr", "LocalAddr", "PeerId", "PeerAddr")
+		for _, conn := range node.Network.Conns {
+			fmt.Printf("%-22s %-22s %-10s %s\n",
+				conn.Conn.RemoteAddr().String(), conn.Conn.LocalAddr().String(), conn.PeerId, conn.PeerAddr)
+		}
+		fmt.Println()
+	}
+	node.Network.ConnsLock.RUnlock()
+}
+
+func (node *Node) AddBlockFromData(timestamp int64, data []byte) {
+	node.BlockChain.AddBlockFromData(int64, data)
+}
+
+func (node *Node) Broadcast(msg string) {
+	node.Network.Broadcast(msg)
+}
+
 func (node *Node) Listen() error {
 	return node.Network.Listen()
-}
-
-func (node *Node) NodeId() string {
-	return node.Network.NodeId
-}
-
-func (node *Node) NodeAddr() string {
-	return node.Network.NodeAddr
 }
 
 func (node *Node) JoinNetwork(peerAddr string) (net.Conn, error) {
