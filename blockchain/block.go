@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"crypto/sha256"
-	"crypto/rsa"
 	"encoding/hex"
 	"encoding/binary"
 	"bytes"

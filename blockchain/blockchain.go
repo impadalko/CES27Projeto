@@ -28,7 +28,7 @@ func NewFromBlock(block Block) *BlockChain {
 		1,
 		block.Hash(),
 		[]Block{block},
-		sync.RWMutex{}
+		sync.RWMutex{},
 	}
 }
 
