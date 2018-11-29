@@ -92,7 +92,7 @@ func (bc *BlockChain) PrintBlocks() {
 	bc.Lock.RUnlock()
 }
 
-func (bc *BlockChain) GetBlock(index int) Block {
+func (bc *BlockChain) GetBlock(index int64) Block {
 	bc.Lock.RLock()
 	block := bc.Blocks[index]
 	bc.Lock.RUnlock()

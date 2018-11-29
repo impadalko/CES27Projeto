@@ -172,3 +172,7 @@ func (node *Node) UsePublicKey(publicKey *rsa.PublicKey) {
 	node.PrivateKey = nil
 	node.PublicKey = publicKey
 }
+
+func (node *Node) GetBlock(index int64) blockchain.Block {
+	return node.BlockChain.GetBlock(index)
+}

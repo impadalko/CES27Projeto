@@ -84,7 +84,7 @@ func main() {
 
 		} else if len(split) == 2 && command == "cast" {
 
-			blockIndex, err := strconv.Atoi(split[1])
+			blockIndex, err := strconv.ParseInt(split[1], 10, 64)
 			if err == nil {
 				block := node.BlockChain.GetBlock(blockIndex)
 				message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
@@ -149,13 +149,13 @@ func main() {
 
 		} else if len(split) == 2 && command == "sign" {
 
-			hash, err := hex.DecodeString(split[1])
-			if err != nil {
-				fmt.Println("Invalid hash")
+			if node.PrivateKey == nil {
+				fmt.Println("Please use a private key with privkey command")
 				fmt.Println()
 			} else {
-				if node.PrivateKey == nil {
-					fmt.Println("Please use a private key with privkey command")
+				hash, err := hex.DecodeString(split[1])
+				if err != nil {
+					fmt.Println("Invalid hash")
 					fmt.Println()
 				} else {
 					signature, err := sign.Sign(node.PrivateKey, hash)
@@ -166,6 +166,36 @@ func main() {
 						fmt.Println("Signature added to the blockchain")
 						fmt.Println()
 						node.AddBlockFromData(util.Now(), signature)
+					}
+				}
+			}
+
+		} else if len(split) == 3 && command == "verify" {
+			
+			if node.PublicKey == nil {
+				fmt.Println("Please use a public key with pubkey command")
+				fmt.Println()
+			} else {
+				blockIndex, err := strconv.ParseInt(split[1], 10, 64)
+				if err != nil {
+					fmt.Println("Invalid hash")
+					fmt.Println()
+				} else {
+					hash, err := hex.DecodeString(split[2])
+					if err != nil {
+						fmt.Println("Invalid hash")
+						fmt.Println()
+					} else {
+						block := node.GetBlock(blockIndex)
+						signature := block.Data
+						err := sign.Verify(node.PublicKey, hash, signature)
+						if err != nil {
+							fmt.Println("The signature is INVALID")
+							fmt.Println()
+						} else {
+							fmt.Println("The signature is VALID")
+							fmt.Println()
+						}
 					}
 				}
 			}
