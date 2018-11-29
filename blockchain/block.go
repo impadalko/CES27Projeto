@@ -2,9 +2,14 @@ package blockchain
 
 import (
 	"crypto/sha256"
+	"crypto/rsa"
+	"encoding/json"
 	"encoding/hex"
 	"encoding/binary"
 	"bytes"
+
+
+	"github.com/impadalko/CES27Projeto/sign"
 )
 
 // SHA-256 outputs 256 bits (32 bytes)
@@ -16,6 +21,12 @@ type Block struct {
 	Timestamp    int64   // 8 bytes
 	DataLen      int32   // 4 bytes
 	Data         []byte  // DataLen bytes
+}
+
+type SignedData struct {
+	Signature    []byte
+	PubKey       rsa.PublicKey
+	Payload      []byte
 }
 
 // We will be using SHA-256 for hashing blocks
@@ -59,4 +70,14 @@ func BlockFromString(str string) (Block, error) {
 	copy(block.Data, bin[headerSize:]) // copy(dst, src)
 
 	return block, nil
+}
+
+func (block Block) VerifyData() error {
+	var signedData SignedData
+	err := json.Unmarshall(block.Data, signedData)
+	if err != nil {
+		return err
+	}
+	err = sign.Verify(signedData.PubKey, sign.Hash(signedData.Payload), signedData.signature)
+	return err
 }

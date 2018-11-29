@@ -30,8 +30,8 @@ func NewFromBlock(block Block) BlockChain {
 	}
 }
 
-func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) {
-	bc.AddBlock(Block{
+func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) error {
+	return bc.AddBlock(Block{
 		bc.NextIndex,
 		bc.LastHash,
 		timestamp,
@@ -41,6 +41,10 @@ func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) {
 }
 
 func (bc *BlockChain) AddBlock(block Block) error {
+	err := block.VerifyData()
+	if err != nil {
+		return errors.New("Block is not valid")
+	}
 	if block.PreviousHash != bc.LastHash || block.Index != bc.NextIndex {
 		return errors.New("Block can't be added to blockchain")
 	}
