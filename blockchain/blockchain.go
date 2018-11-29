@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"fmt"
 	"errors"
 )
 
@@ -22,7 +21,6 @@ func New(timestamp int64, Data []byte) BlockChain {
 }
 
 func NewFromBlock(block Block) BlockChain {
-	fmt.Println("Genesis Block:", block)
 	return BlockChain{
 		1,
 		block.Hash(),
@@ -48,7 +46,6 @@ func (bc *BlockChain) AddBlock(block Block) error {
 	if block.PreviousHash != bc.LastHash || block.Index != bc.NextIndex {
 		return errors.New("Block can't be added to blockchain")
 	}
-	fmt.Println("Added Block:", block)
 	bc.Blocks = append(bc.Blocks, block)
 	bc.NextIndex++
 	bc.LastHash = block.Hash()

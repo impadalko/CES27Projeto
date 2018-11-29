@@ -54,12 +54,21 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 			fmt.Println(err)
 		}
 
-	} else if block.Index > node.BlockChain.NextIndex {
+	} else if block.Index >= node.BlockChain.NextIndex {
 
 		// the current node is behind the blockchain of the peer,
 		// so request peer to send the full blockchain
-		connInfo.SendMessage("REQUEST-BLOCKCHAIN")
+		connInfo.SendMessage("REQUEST-BLOCKCHAIN\n")
 
+	} else {
+
+		fmt.Println("Ignored Invalid block:")
+		fmt.Println("  Index:     ", block.Index)
+		fmt.Println("  Hash:      ", block.Hash().String()[:8])
+		fmt.Println("  Timestamp: ", block.Timestamp)
+		fmt.Println("  Data:      ", string(block.Data))
+		fmt.Println()
+		
 	}
 }
 

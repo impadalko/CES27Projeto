@@ -39,6 +39,14 @@ func (network *Network) SendMessage(peerId string, message string) error {
 	return err
 }
 
+func (network *Network) Broadcast(message string) {
+	network.ConnsLock.RLock()
+	for _, connInfo := range network.Conns {
+		fmt.Fprintf(connInfo.Conn, message)
+	}
+	network.ConnsLock.RUnlock()
+}
+
 type Network struct {
 	NodeId    string
 	NodeAddr  string
@@ -123,6 +131,10 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 	// received message
 	message = strings.TrimSpace(message)
 	args := strings.Split(message, " ")
+
+	if len(args) == 0 {
+		return nil, errors.New("Empty message")
+	}
 
 	messageType := args[0]
 
@@ -267,14 +279,14 @@ func (network *Network) SetPeer(peerId string, peer Peer) {
 	network.PeersLock.Lock()
 	network.Peers[peerId] = peer
 	network.PeersLock.Unlock()
-	fmt.Printf("Peer connected %s\n", peerId)
+	fmt.Printf("Peer connected: %s\n\n", peerId)
 }
 
 func (network *Network) DeletePeer(peerId string) {
 	network.PeersLock.Lock()
 	if _, ok := network.Peers[peerId]; ok {
 		delete(network.Peers, peerId)
-		fmt.Printf("Peer disconnected %s\n", peerId)
+		fmt.Printf("Peer disconnected: %s\n\n", peerId)
 	}
 	network.PeersLock.Unlock()
 }
@@ -293,18 +305,6 @@ func (network *Network) JoinNetwork(peerAddr string) (net.Conn, error) {
 		fmt.Fprintf(conn, "LIST\n")
 		return conn, nil
 	}
-}
-
-func (network *Network) GetPeers() []Peer {
-	network.PeersLock.RLock()
-	peers := make([]Peer, len(network.Peers))
-	i := 0
-	for _, peer := range network.Peers {
-		peers[i] = peer
-		i++
-	}
-	network.PeersLock.RUnlock()
-	return peers
 }
 
 func (network *Network) GetHandler(messageType string) (func(connInfo *ConnInfo, args []string), bool) {
