@@ -59,7 +59,7 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		// replace the blockchain of the current node with and empty blockchain
 		// starting with the received block
 		node.BlockChain = blockchain.NewFromBlock(block)
-		hexData := util.HexString(hex.EncodeToString(block.Data))
+		hexData := util.Prefix(hex.EncodeToString(block.Data))
 		fmt.Println("Block added:")
 		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 		fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
@@ -74,7 +74,7 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			hexData := util.HexString(hex.EncodeToString(block.Data))
+			hexData := util.Prefix(hex.EncodeToString(block.Data))
 			fmt.Println("Block added:")
 			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
@@ -92,7 +92,7 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		connInfo.SendMessage("REQUEST-BLOCKCHAIN\n")
 
 	} else {
-		hexData := util.HexString(hex.EncodeToString(block.Data))
+		hexData := util.Prefix(hex.EncodeToString(block.Data))
 		fmt.Println("WARNING: Ignored invalid block:")
 		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
