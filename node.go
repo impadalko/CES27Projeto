@@ -70,7 +70,7 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		block.PreviousHash == node.BlockChain.LastHash {
 
 		// add the new block to the end of the blockchain of the current node
-		err = node.BlockChain.AddBlock(block)
+		_, err = node.BlockChain.AddBlock(block)
 		if err != nil {
 			fmt.Println(err)
 		} else {
@@ -139,8 +139,8 @@ func (node *Node) PrintConns() {
 	node.Network.ConnsLock.RUnlock()
 }
 
-func (node *Node) AddBlockFromData(timestamp int64, data []byte) {
-	node.BlockChain.AddBlockFromData(timestamp, data)
+func (node *Node) AddBlockFromData(timestamp int64, data []byte) (int64, error) {
+	return node.BlockChain.AddBlockFromData(timestamp, data)
 }
 
 func (node *Node) Broadcast(msg string) {

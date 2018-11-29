@@ -183,9 +183,12 @@ func HandleCommand(command string, split []string) error {
 		if err != nil {
 			return err
 		}
-		node.AddBlockFromData(util.Now(), signature)
-		fmt.Printf("The document with hash %s was signed with key %s and added to the blockchain\n\n", 
-			util.HexString(split[1]), node.KeyName)
+		blockIndex, err := node.AddBlockFromData(util.Now(), signature)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("The document with hash %s was signed with key %s and added to the blockchain in block %d\n\n", 
+			util.HexString(split[1]), node.KeyName, blockIndex)
 
 	} else if len(split) == 3 && command == "verify" {
 		// verify a signature present in the blockchain using a supplied hash

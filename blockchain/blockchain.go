@@ -33,7 +33,7 @@ func NewFromBlock(block Block) *BlockChain {
 	}
 }
 
-func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) error {
+func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) (int64, error) {
 	return bc.AddBlock(Block{
 		bc.NextIndex,
 		bc.LastHash,
@@ -43,19 +43,19 @@ func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) error {
 	})
 }
 
-func (bc *BlockChain) AddBlock(block Block) error {
+func (bc *BlockChain) AddBlock(block Block) (int64, error) {
 	bc.Lock.Lock()
 	defer bc.Lock.Unlock()
 	if block.PreviousHash != bc.LastHash {
-		return errors.New("Previous hash of the block doesn't match")
+		return -1, errors.New("Previous hash of the block doesn't match")
 	}
 	if block.Index != bc.NextIndex {
-		return errors.New("Index of the block doesn't match")
+		return -1, errors.New("Index of the block doesn't match")
 	}
 	bc.Blocks = append(bc.Blocks, block)
 	bc.NextIndex++
 	bc.LastHash = block.Hash()
-	return nil
+	return bc.NextIndex-1, nil
 }
 
 func (bc *BlockChain) VerifyConsistency() bool {
