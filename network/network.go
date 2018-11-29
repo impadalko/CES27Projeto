@@ -31,7 +31,7 @@ func (connInfo *ConnInfo) SendMessage(message string) error {
 }
 
 func (network *Network) SendMessage(peerId string, message string) error {
-	peer, ok := network.PeerGet(peerId)
+	peer, ok := network.GetPeer(peerId)
 	if !ok {
 		return errors.New("Peer not found")
 	}
@@ -52,11 +52,13 @@ type Network struct {
 	Conns     map[net.Conn]*ConnInfo
 	ConnsLock sync.RWMutex
 
+	// map: messageType string => handle func
+	Handlers     map[string]func(connInfo *ConnInfo, args []string)
+	HandlersLock sync.RWMutex
+
 	// the native map implementation in Go is not thread-safe.
 	// we may use multiple goroutines that are able to access and modify the same maps concurrently,
 	// so we need locks for synchronization
-
-	Handlers  map[string]func(connInfo *ConnInfo, args []string)
 }
 
 func NewNode(nodeId string) *Network {
@@ -143,13 +145,13 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 			connInfo.Conn.Close()
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
 		} else {
-			_, ok := network.PeerGet(connInfo.PeerId)
+			_, ok := network.GetPeer(connInfo.PeerId)
 			if ok {
 				connInfo.Conn.Close()
 				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
 			} else {
 				// accept requesting peer as peer
-				network.PeerSet(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
+				network.SetPeer(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
 				fmt.Fprintf(connInfo.Conn, "ACCEPTED %s %s\n", network.NodeId, network.NodeAddr)
 				return nil, nil
 			}
@@ -164,13 +166,13 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 			connInfo.Conn.Close()
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
 		} else {
-			_, ok := network.PeerGet(connInfo.PeerId)
+			_, ok := network.GetPeer(connInfo.PeerId)
 			if ok {
 				connInfo.Conn.Close()
 				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
 			} else {
 				// add accepting peer as peer
-				network.PeerSet(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
+				network.SetPeer(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
 				return nil, nil
 			}
 		}
@@ -197,7 +199,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 		if peerId == network.NodeId {
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
 		} else {
-			_, ok := network.PeerGet(peerId)
+			_, ok := network.GetPeer(peerId)
 			if ok {
 				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
 			} else {
@@ -210,7 +212,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				}
 			}
 		}
-	} else if handler, ok := network.Handlers[messageType]; ok {
+	} else if handler, ok := network.GetHandler(messageType); ok {
 		handler(connInfo, args)
 	} else {
 		return nil, &ProtocolError{"InvalidMessage", "The message is invalid"}
@@ -224,7 +226,7 @@ func (network *Network) HandleConnection(conn net.Conn) *ConnInfo {
 	connInfo.Conn = conn
 
 	// allows to get a list of connections
-	network.ConnSet(conn, &connInfo)
+	network.SetConn(conn, &connInfo)
 
 	// the protocol of communication bewteen peers is in plain-text format,
 	// with newlines '\n' at the end of each message
@@ -242,19 +244,19 @@ func (network *Network) ReadNextMessage(connInfo *ConnInfo) (string, error) {
 }
 
 func (network *Network) CleanupConnection(connInfo *ConnInfo) {
-	network.PeerDelete(connInfo.PeerId)
-	network.ConnDelete(connInfo.Conn)
+	network.DeletePeer(connInfo.PeerId)
+	network.DeleteConn(connInfo.Conn)
 }
 
 /* SYNCHRONIZED OPERATIONS ON MAPS */
 
-func (network *Network) ConnSet(conn net.Conn, connInfo *ConnInfo) {
+func (network *Network) SetConn(conn net.Conn, connInfo *ConnInfo) {
 	network.ConnsLock.Lock()
 	network.Conns[conn] = connInfo
 	network.ConnsLock.Unlock()
 }
 
-func (network *Network) ConnDelete(conn net.Conn) {
+func (network *Network) DeleteConn(conn net.Conn) {
 	network.ConnsLock.Lock()
 	if _, ok := network.Conns[conn]; ok {
 		delete(network.Conns, conn)
@@ -262,21 +264,21 @@ func (network *Network) ConnDelete(conn net.Conn) {
 	network.ConnsLock.Unlock()
 }
 
-func (network *Network) PeerGet(peerId string) (Peer, bool) {
+func (network *Network) GetPeer(peerId string) (Peer, bool) {
 	network.PeersLock.RLock()
 	peer, ok := network.Peers[peerId]
 	network.PeersLock.RUnlock()
 	return peer, ok
 }
 
-func (network *Network) PeerSet(peerId string, peer Peer) {
+func (network *Network) SetPeer(peerId string, peer Peer) {
 	network.PeersLock.Lock()
 	network.Peers[peerId] = peer
 	network.PeersLock.Unlock()
 	fmt.Printf("Peer connected %s\n", peerId)
 }
 
-func (network *Network) PeerDelete(peerId string) {
+func (network *Network) DeletePeer(peerId string) {
 	network.PeersLock.Lock()
 	if _, ok := network.Peers[peerId]; ok {
 		delete(network.Peers, peerId)
@@ -313,6 +315,15 @@ func (network *Network) GetPeers() []Peer {
 	return peers
 }
 
+func (network *Network) GetHandler(messageType string) (func(connInfo *ConnInfo, args []string), bool) {
+	network.HandlersLock.RLock()
+	handler, ok := network.Handlers[messageType]
+	network.HandlersLock.RUnlock()
+	return handler, ok
+}
+
 func (network *Network) AddHandler(messageType string, handler func(connInfo *ConnInfo, args []string)) {
+	network.HandlersLock.Lock()
 	network.Handlers[messageType] = handler
+	network.HandlersLock.Unlock()
 }
