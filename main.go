@@ -86,24 +86,14 @@ func main() {
 
 		} else if command == "blocks" {
 
-			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
-			for _, block := range node.BlockChain.Blocks {
-				fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-					block.PreviousHash.String()[:8], block.Timestamp, block.Data)
-			}
-			fmt.Println()
+			node.PrintBlocks()
 
 		} else if len(split) >= 2 && command == "add" {
 
 			message := strings.Join(split[1:], " ")
 			node.BlockChain.AddBlockFromData(util.Now(), []byte(message))
 
-			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
-			for _, block := range node.BlockChain.Blocks {
-				fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-					block.PreviousHash.String()[:8], block.Timestamp, block.Data)
-			}
-			fmt.Println()
+			node.PrintBlocks()
 
 		} else if len(split) == 2 && command == "broadcast" {
 

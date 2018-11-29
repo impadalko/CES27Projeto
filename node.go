@@ -8,15 +8,15 @@ import (
 )
 
 type Node struct {
-	Network    network.Network
-	BlockChain blockchain.BlockChain
+	Network    *network.Network
+	BlockChain *blockchain.BlockChain
 }
 
 var node Node // find some way to share the node between handlers without global...
 
 func NewNode(nodeId string, timestamp int64) *Node {
 	node = Node{
-		*network.NewNode(nodeId),
+		network.NewNode(nodeId),
 		blockchain.New(timestamp, []byte{}),
 	}
 	node.Network.AddHandler("REQUEST-BLOCKCHAIN", HandleRequestBlockchain)
@@ -94,4 +94,8 @@ func (node *Node) StartHandleConnection(conn net.Conn) {
 
 func (node *Node) Start() {
 	node.Network.Start()
+}
+
+func (node *Node) PrintBlocks() {
+	node.BlockChain.PrintBlocks()
 }
