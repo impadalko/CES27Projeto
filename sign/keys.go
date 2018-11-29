@@ -6,6 +6,7 @@ package sign
 import (
     "os"
     "io/ioutil"
+    "errors"
 
     // Cryptographically secure random number generator
     "crypto/rand"
@@ -114,13 +115,6 @@ func (pubKey *PublicKey) WriteToPemFile(filename string) error {
     return nil
 }
 
-type DecodeKeyError struct {
-}
-
-func (err *DecodeKeyError) Error() string {
-    return "Error decoding PEM key"
-}
-
 // Retrieves encoded @privKey from file with name @filename
 func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
     bytes, err := ioutil.ReadFile(filename)
@@ -131,7 +125,7 @@ func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
     // func pem.Decode(data []byte) (p *pem.Block, rest []byte)
     pem, rest := pem.Decode(bytes)
     if pem == nil || pem.Type != "RSA PRIVATE KEY" || len(rest) != 0 {
-        return nil, &DecodeKeyError{}
+        return nil, errors.New("Error decoding PEM key")
     }
 
     // func x509.ParsePKCS1PrivateKey(der []byte) (*rsa.PrivateKey, error)
@@ -153,7 +147,7 @@ func PublicKeyFromPemFile(filename string) (*PublicKey, error) {
     // func pem.Decode(data []byte) (p *pem.Block, rest []byte)
     pem, rest := pem.Decode(bytes)
     if pem == nil || pem.Type != "RSA PUBLIC KEY" || len(rest) != 0 {
-        return nil, &DecodeKeyError{}
+        return nil, errors.New("Error decoding PEM key")
     }
 
     // func x509.ParsePKCS1PublicKey(der []byte) (*rsa.PublicKey, error)

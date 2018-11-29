@@ -1,17 +1,9 @@
 package network
 
 import (
-	//"fmt"
+	"errors"
 	"strings"
 )
-
-type TestError struct {
-    msg string
-}
-
-func (err *TestError) Error() string {
-    return err.msg
-}
 
 func TestNodeJoinNetwork() error {
 	nodeA := NewNode("A")
@@ -43,7 +35,7 @@ func TestNodeJoinNetwork() error {
 		return err
 	}
 	if !strings.HasPrefix(nodeAMsg, "REQUEST ") {
-		return &TestError{"Expected REQUEST message"}
+		return errors.New("Expected REQUEST message")
 	}
 	
 	_, err = nodeA.HandleMessage(nodeAConnInfo, nodeAMsg)
@@ -56,7 +48,7 @@ func TestNodeJoinNetwork() error {
 		return err
 	}
 	if !strings.HasPrefix(nodeBMsg, "ACCEPTED ") {
-		return &TestError{"Expected ACCEPTED message"}
+		return errors.New("Expected ACCEPTED message")
 	}
 
 	_, err = nodeB.HandleMessage(nodeBConnInfo, nodeBMsg)

@@ -2,15 +2,8 @@ package blockchain
 
 import (
 	"bytes"
+	"errors"
 )
-
-type TestError struct {
-    msg string
-}
-
-func (err *TestError) Error() string {
-    return err.msg
-}
 
 func TestBlockToStringAndFromString() error {
 	hash := HashVal{}
@@ -38,7 +31,7 @@ func TestBlockToStringAndFromString() error {
 		block.Timestamp != blockFromString.Timestamp ||
 		block.DataLen != blockFromString.DataLen ||
 		!bytes.Equal(block.Data, blockFromString.Data) {
-		return &TestError{"block mismatch"}
+		return errors.New("block mismatch")
 	}
 
 	return nil

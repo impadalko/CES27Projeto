@@ -33,11 +33,6 @@ func main() {
 		}
 		fmt.Fprintf(conn, "REQUEST-BLOCKCHAIN\n")
 		go node.StartHandleConnection(conn)
-	} else {
-		for i := 0; i < 10; i++ {
-			b := byte(65 + i)
-			node.BlockChain.AddBlockFromData(util.Now(), []byte{ b })
-		}
 	}
 
 	go node.Start()
@@ -91,22 +86,23 @@ func main() {
 
 		} else if command == "blocks" {
 
-			fmt.Printf("%5s %-8s %-8s %-10s %-7s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "DataLen", "Data")
+			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 			for _, block := range node.BlockChain.Blocks {
-				fmt.Printf("%5d %8s %8s %10d %7d %s\n", block.Index, block.Hash().String()[:8],
-					block.PreviousHash.String()[:8], block.Timestamp, block.DataLen, block.Data)
+				fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
+					block.PreviousHash.String()[:8], block.Timestamp, block.Data)
 			}
 			fmt.Println()
 
-		} else if len(split) == 2 && command == "add" {
+		} else if len(split) >= 2 && command == "add" {
 
-			message := split[1]
+			message := strings.Join(split[1:], " ")
 			node.BlockChain.AddBlockFromData(util.Now(), []byte(message))
-			block := node.BlockChain.Blocks[len(node.BlockChain.Blocks) - 1]
-			fmt.Println("Index:     ", block.Index)
-			fmt.Println("Hash:      ", block.Hash().String()[:8])
-			fmt.Println("Timestamp: ", block.Timestamp)
-			fmt.Println("Data:      ", string(block.Data))
+
+			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
+			for _, block := range node.BlockChain.Blocks {
+				fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
+					block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+			}
 			fmt.Println()
 
 		} else if len(split) == 2 && command == "broadcast" {
