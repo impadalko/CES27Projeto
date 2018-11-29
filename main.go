@@ -30,6 +30,11 @@ func main() {
 		}
 		fmt.Fprintf(conn, "BLOCKCHAIN\n")
 		go node.StartHandleConnection(conn)
+	} else {
+		for i := 0; i < 10; i++ {
+			b := byte(i)
+			node.blockChain.AddBlockFromData(util.Now(), []byte{ b, b * 10 })
+		}
 	}
 
 	node.Start()

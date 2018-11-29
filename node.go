@@ -12,13 +12,39 @@ type Node struct {
 	blockChain blockchain.BlockChain
 }
 
+var node Node // find some way to share the node between handlers without global...
+
 func NewNode(nodeId string, timestamp int64) *Node {
-	node := Node{
+	node = Node{
 		*network.NewNode(nodeId),
 		blockchain.New(timestamp, []byte{}),
 	}
 	node.network.AddHandler("BLOCKCHAIN", HandleBlockchain)
+	node.network.AddHandler("BLOCK", HandleBlock)
 	return &node
+}
+
+func HandleBlockchain(connInfo *network.ConnInfo, args []string) {
+	for _, block := range node.blockChain.Blocks {
+		msg := fmt.Sprintf("BLOCK %s\n", block.String())
+		connInfo.SendMessage(msg)
+	}
+}
+
+func HandleBlock(connInfo *network.ConnInfo, args []string) {
+	block, err := blockchain.BlockFromString(args[1])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if block.Index == 0 {
+		node.blockChain = blockchain.NewFromBlock(block)
+	} else {
+		err = node.blockChain.AddBlock(block)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func (node *Node) Listen() error {
@@ -43,9 +69,4 @@ func (node *Node) StartHandleConnection(conn net.Conn) {
 
 func (node *Node) Start() {
 	node.network.Start()
-}
-
-func HandleBlockchain(connInfo *network.ConnInfo, args []string) {
-	fmt.Println("BLOCHAIN Handler fired")
-	connInfo.SendMessage("ACK")
 }
