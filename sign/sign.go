@@ -24,14 +24,14 @@ func Hash(data []byte) []byte {
 
 // @hash is hashed using the crypto.SHA256 hash function. Returns the signed hash
 // of message. Provides authenticity but not confidentiality.
-func Sign(privKey *PrivateKey, hash []byte) ([]byte, error) {
+func Sign(privKey *rsa.PrivateKey, hash []byte) ([]byte, error) {
     // func rsa.SignPKCS1v15(rand io.Reader, priv *rsa.PrivateKey, hash crypto.Hash, hashed []byte) ([]byte, error)
-    return rsa.SignPKCS1v15(rand.Reader, (*rsa.PrivateKey)(privKey), crypto.SHA256, hash)
+    return rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, hash)
 }
 
 // Verifies if @signature is a valid signature of @hash using the correspondent
 // private key of @pubKey
-func Verify(pubKey *PublicKey, hash []byte, signature []byte) error {
+func Verify(pubKey *rsa.PublicKey, hash []byte, signature []byte) error {
     // func rsa.VerifyPKCS1v15(pub *rsa.PublicKey, hash crypto.Hash, hashed []byte, sig []byte) error
-    return rsa.VerifyPKCS1v15((*rsa.PublicKey)(pubKey), crypto.SHA256, hash, signature)
+    return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hash, signature)
 }

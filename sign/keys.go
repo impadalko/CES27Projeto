@@ -42,23 +42,14 @@ type pem.Block struct {
 }
 */
 
-type PrivateKey rsa.PrivateKey
-type PublicKey  rsa.PublicKey
-
 // Generates RSA private key with size @KeySizeBits
-func GenerateKey() (*PrivateKey, error) {
+func GenerateKey() (*rsa.PrivateKey, error) {
     // func rsa.GenerateKey(random io.Reader, bits int) (*rsa.PrivateKey, error)
-    rsaPrivKey, err := rsa.GenerateKey(rand.Reader, KeySizeBits)
-    return (*PrivateKey)(rsaPrivKey), err
-}
-
-// Retrieves RSA public key from given @privKey
-func (privKey *PrivateKey) GetPublicKey() *PublicKey {
-    return (*PublicKey)(&privKey.PublicKey)
+    return rsa.GenerateKey(rand.Reader, KeySizeBits)
 }
 
 // Writes encoded @privKey into a file with name @filename
-func (privKey *PrivateKey) WriteToPemFile(filename string) error {
+func WritePrivateKeyToPemFile(privKey *rsa.PrivateKey, filename string) error {
     PrivKeyFile, err := os.Create(filename)
     if err != nil {
         return err
@@ -87,14 +78,14 @@ func (privKey *PrivateKey) WriteToPemFile(filename string) error {
 }
 
 // Writes encoded @pubKey into a file with name @filename
-func (pubKey *PublicKey) WriteToPemFile(filename string) error {
+func WritePublicKeyToPemFile(pubKey *rsa.PublicKey, filename string) error {
     PubKeyFile, err := os.Create(filename)
     if err != nil {
         return err
     }
 
     // func x509.MarshalPKCS1PublicKey(key *rsa.PublicKey) []byte
-    bytes := x509.MarshalPKCS1PublicKey((*rsa.PublicKey)(pubKey))
+    bytes := x509.MarshalPKCS1PublicKey(pubKey)
 
     // func pem.Encode(out io.Writer, b *pem.Block) error
     err = pem.Encode(PubKeyFile,
@@ -116,7 +107,7 @@ func (pubKey *PublicKey) WriteToPemFile(filename string) error {
 }
 
 // Retrieves encoded @privKey from file with name @filename
-func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
+func PrivateKeyFromPemFile(filename string) (*rsa.PrivateKey, error) {
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
         return nil, err
@@ -134,11 +125,11 @@ func PrivateKeyFromPemFile(filename string) (*PrivateKey, error) {
         return nil, err
     }
 
-    return (*PrivateKey)(rsaPrivKey), nil
+    return rsaPrivKey, nil
 }
 
 // Retrieves encoded @pubKey from file with name @filename
-func PublicKeyFromPemFile(filename string) (*PublicKey, error) {
+func PublicKeyFromPemFile(filename string) (*rsa.PublicKey, error) {
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
         return nil, err
@@ -156,5 +147,5 @@ func PublicKeyFromPemFile(filename string) (*PublicKey, error) {
         return nil, err
     }
 
-    return (*PublicKey)(rsaPubKey), nil
+    return rsaPubKey, nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"errors"
+	"encoding/hex"
 )
 
 type BlockChain struct {
@@ -80,8 +81,12 @@ func (bc *BlockChain) PrintBlocks() {
 	bc.Lock.RLock()
 	fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 	for _, block := range bc.Blocks {
+		hexData := hex.EncodeToString(block.Data)
+		if len(hexData) > 8 {
+			hexData = hexData[:8]
+		}
 		fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-			block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+			block.PreviousHash.String()[:8], block.Timestamp, hexData)
 	}
 	fmt.Println()
 	bc.Lock.RUnlock()

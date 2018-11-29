@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"crypto/rsa"
 	"github.com/impadalko/CES27Projeto/blockchain"
 	"github.com/impadalko/CES27Projeto/network"
 )
@@ -10,6 +11,8 @@ import (
 type Node struct {
 	Network    *network.Network
 	BlockChain *blockchain.BlockChain
+	PrivateKey *rsa.PrivateKey
+	PublicKey  *rsa.PublicKey
 }
 
 var node Node // FIXME find some way to share the node between handlers without global...
@@ -18,6 +21,8 @@ func NewNode(nodeId string) *Node {
 	node = Node{
 		network.NewNode(nodeId),
 		&blockchain.BlockChain{},
+		nil,
+		nil,
 	}
 	node.Network.AddHandler("REQUEST-BLOCKCHAIN", HandleRequestBlockchain)
 	node.Network.AddHandler("BLOCK-ADD", HandleBlockAddMessage)
@@ -156,4 +161,14 @@ func (node *Node) PrintBlocks() {
 
 func (node *Node) VerifyConsistency() bool {
 	return node.BlockChain.VerifyConsistency()
+}
+
+func (node *Node) UsePrivateKey(privateKey *rsa.PrivateKey) {
+	node.PrivateKey = privateKey
+	node.PublicKey = &privateKey.PublicKey
+}
+
+func (node *Node) UsePublicKey(publicKey *rsa.PublicKey) {
+	node.PrivateKey = nil
+	node.PublicKey = publicKey
 }

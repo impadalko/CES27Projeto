@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"encoding/hex"
 
 	"github.com/impadalko/CES27Projeto/blockchain"
 	"github.com/impadalko/CES27Projeto/network"
@@ -101,6 +102,72 @@ func main() {
 			} else {
 				fmt.Println("The blockchain is NOT consistent")
 				fmt.Println()
+			}
+
+		} else if len(split) == 2 && command == "genkey" {
+
+			privKey, err := sign.GenerateKey()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				pubKey := &privKey.PublicKey
+				keyName := split[1]
+				privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
+				publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
+				sign.WritePrivateKeyToPemFile(privKey, privateFilename)
+				sign.WritePublicKeyToPemFile(pubKey, publicFilename)
+				fmt.Printf("Generated private key %s saved to %s\n", keyName, privateFilename)
+				fmt.Printf("Generated public key %s saved to %s\n", keyName, publicFilename)
+				fmt.Println()
+			}
+		
+		} else if len(split) == 2 && command == "privkey" {
+
+			keyName := split[1]
+			privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
+			privKey, err := sign.PrivateKeyFromPemFile(privateFilename)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				node.UsePrivateKey(privKey)
+				fmt.Println("Using private key:", keyName)
+				fmt.Println()
+			}
+
+		} else if len(split) == 2 && command == "pubkey" {
+
+			keyName := split[1]
+			publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
+			pubKey, err := sign.PublicKeyFromPemFile(publicFilename)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				node.UsePublicKey(pubKey)
+				fmt.Println("Using public key:", keyName)
+				fmt.Println()
+			}
+
+		} else if len(split) == 2 && command == "sign" {
+
+			hash, err := hex.DecodeString(split[1])
+			if err != nil {
+				fmt.Println("Invalid hash")
+				fmt.Println()
+			} else {
+				if node.PrivateKey == nil {
+					fmt.Println("Please use a private key with privkey command")
+					fmt.Println()
+				} else {
+					signature, err := sign.Sign(node.PrivateKey, hash)
+					if err != nil {
+						fmt.Println(err)
+						fmt.Println()
+					} else {
+						fmt.Println("Signature added to the blockchain")
+						fmt.Println()
+						node.AddBlockFromData(util.Now(), signature)
+					}
+				}
 			}
 
 		} else {

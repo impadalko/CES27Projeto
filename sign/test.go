@@ -13,14 +13,14 @@ func TestWriteAndReadPemFile() error {
 	if err != nil {
 		return err
 	}
-	pubKey := privKey.GetPublicKey()
+	pubKey := &privKey.PublicKey
 	
-	err = privKey.WriteToPemFile("priv_key.pem")
+	err = WritePrivateKeyToPemFile(privKey, "priv_key.pem")
 	if err != nil {
 		return err
 	}
 
-	err = pubKey.WriteToPemFile("pub_key.pem")
+	err = WritePublicKeyToPemFile(pubKey, "pub_key.pem")
 	if err != nil {
 		return err
     }
@@ -53,7 +53,7 @@ func TestSignAndVerify() error {
 	if err != nil {
 		return err
 	}
-	pubKey := privKey.GetPublicKey()
+	pubKey := &privKey.PublicKey
 
 	data := []byte("Hello World!")
 	hash := Hash(data)
