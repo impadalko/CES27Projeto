@@ -19,12 +19,6 @@ type Block struct {
 	Data         []byte  // DataLen bytes
 }
 
-type SignedData struct {
-	Signature    []byte
-	PubKey       rsa.PublicKey
-	Payload      []byte
-}
-
 // We will be using SHA-256 for hashing blocks
 func (block Block) Hash() HashVal {
 	buffer := bytes.Buffer{}
@@ -66,16 +60,4 @@ func BlockFromString(str string) (Block, error) {
 	copy(block.Data, bin[headerSize:]) // copy(dst, src)
 
 	return block, nil
-}
-
-func (block Block) VerifyData() error {
-	return nil
-	/*
-	var signedData SignedData
-	err := json.Unmarshall(block.Data, signedData)
-	if err != nil {
-		return err
-	}
-	err = sign.Verify(signedData.PubKey, sign.Hash(signedData.Payload), signedData.Signature)
-	return err*/
 }

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"fmt"
+	"sync"
 	"errors"
 )
 
@@ -9,6 +10,7 @@ type BlockChain struct {
 	NextIndex int64
 	LastHash  HashVal
 	Blocks    []Block
+	Lock      sync.RWMutex
 }
 
 func New(timestamp int64, Data []byte) *BlockChain {
@@ -26,6 +28,7 @@ func NewFromBlock(block Block) *BlockChain {
 		1,
 		block.Hash(),
 		[]Block{block},
+		sync.RWMutex{}
 	}
 }
 
@@ -40,8 +43,13 @@ func (bc *BlockChain) AddBlockFromData(timestamp int64, Data []byte) error {
 }
 
 func (bc *BlockChain) AddBlock(block Block) error {
-	if block.PreviousHash != bc.LastHash || block.Index != bc.NextIndex {
-		return errors.New("Block can't be added to blockchain")
+	bc.Lock.Lock()
+	defer bc.Lock.Unlock()
+	if block.PreviousHash != bc.LastHash {
+		return errors.New("Previous hash of the block doesn't match")
+	}
+	if block.Index != bc.NextIndex {
+		return errors.New("Index of the block doesn't match")
 	}
 	bc.Blocks = append(bc.Blocks, block)
 	bc.NextIndex++
@@ -50,6 +58,8 @@ func (bc *BlockChain) AddBlock(block Block) error {
 }
 
 func (bc *BlockChain) VerifyConsistency() bool {
+	bc.Lock.Lock()
+	defer bc.Lock.Unlock()
 	lastHash := bc.Blocks[0].Hash()
 	for _, block := range bc.Blocks[1:] {
 		if block.PreviousHash != lastHash {
@@ -63,12 +73,20 @@ func (bc *BlockChain) VerifyConsistency() bool {
 	return true
 }
 
-
-func (bc BlockChain) PrintBlocks() {
+func (bc *BlockChain) PrintBlocks() {
+	bc.Lock.RLock()
 	fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 	for _, block := range bc.Blocks {
 		fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
 			block.PreviousHash.String()[:8], block.Timestamp, block.Data)
 	}
 	fmt.Println()
+	bc.Lock.RUnlock()
+}
+
+func (bc *BlockChain) GetBlock(index int) Block {
+	bc.Lock.RLock()
+	block := bc.Blocks[index]
+	bc.Lock.RUnlock()
+	return block
 }

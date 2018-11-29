@@ -99,7 +99,7 @@ func main() {
 
 			blockIndex, err := strconv.Atoi(split[1])
 			if err == nil {
-				block := node.BlockChain.Blocks[blockIndex]
+				block := node.BlockChain.GetBlock(blockIndex)
 				message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
 				node.Network.Broadcast(message)
 			}

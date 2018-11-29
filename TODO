@@ -1,13 +1,3 @@
-x protocolo acrescentar pedir blockchain
-
-x protocolo acrescentar responder com blockchain
-
-x colocar blockchain no nó
-
-* enviar novos blocos para a rede
-
-x receber novos blocos da rede (vericando)
-
-* resolver conflitos quando nó estiver defasado
+* suporte a assinaturas
 
 * suporte a adendo

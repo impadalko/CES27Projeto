@@ -26,13 +26,17 @@ func NewNode(nodeId string, timestamp int64) *Node {
 
 func HandleRequestBlockchain(connInfo *network.ConnInfo, args []string) {
 	// the peer requested for all the blocks of the blockchain of the current node to be sent back
+	node.BlockChain.Lock.RLock()
 	for _, block := range node.BlockChain.Blocks {
 		msg := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
 		connInfo.SendMessage(msg)
 	}
+	node.BlockChain.Lock.RUnlock()
 }
 
 func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
+	// FIXME node.BlockChain must be handled with mutexes
+	
 	// the peer sent a block to be added to the blockchain of the current node
 	block, err := blockchain.BlockFromString(args[1])
 	if err != nil {
@@ -62,7 +66,7 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 
 	} else {
 
-		fmt.Println("Ignored Invalid block:")
+		fmt.Println("WARNING: Ignored Invalid block")
 		fmt.Println("  Index:     ", block.Index)
 		fmt.Println("  Hash:      ", block.Hash().String()[:8])
 		fmt.Println("  Timestamp: ", block.Timestamp)
