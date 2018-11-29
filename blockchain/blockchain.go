@@ -58,6 +58,9 @@ func (bc *BlockChain) AddBlock(block Block) error {
 }
 
 func (bc *BlockChain) VerifyConsistency() bool {
+	// TODO verify if indexes follow 0, 1, 2 ...
+	// TODO verify if timestamps are non-decreasing
+	// TODO verify if DataLen = len(Data)
 	bc.Lock.Lock()
 	defer bc.Lock.Unlock()
 	lastHash := bc.Blocks[0].Hash()

@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	node := NewNode(util.RandomString(8), util.Now())
+	node := NewNode(util.RandomString(8))
 	err := node.Listen()
 	if err != nil {
 		fmt.Println(err)
@@ -30,8 +30,13 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		// request copy of the blockchain of the peer
 		fmt.Fprintf(conn, "REQUEST-BLOCKCHAIN\n")
 		go node.StartHandleConnection(conn)
+	} else {
+		// start own blockchain and network
+		node.BlockChain = blockchain.New(util.Now(), []byte{})
+		node.PrintBlocks()
 	}
 
 	go node.Start()
@@ -76,7 +81,7 @@ func main() {
 			node.AddBlockFromData(util.Now(), []byte(message))
 			node.PrintBlocks()
 
-		} else if len(split) == 2 && command == "broadcast" {
+		} else if len(split) == 2 && command == "cast" {
 
 			blockIndex, err := strconv.Atoi(split[1])
 			if err == nil {
@@ -85,6 +90,16 @@ func main() {
 				node.Broadcast(message)
 			} else {
 				fmt.Println("Invalid command")
+				fmt.Println()
+			}
+
+		} else if len(split) == 1 && command == "verify" {
+
+			if node.VerifyConsistency() {
+				fmt.Println("The blockchain is consistent")
+				fmt.Println()
+			} else {
+				fmt.Println("The blockchain is NOT consistent")
 				fmt.Println()
 			}
 

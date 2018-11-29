@@ -34,8 +34,8 @@ func TestNodeJoinNetwork() error {
 	if err != nil {
 		return err
 	}
-	if !strings.HasPrefix(nodeAMsg, "REQUEST ") {
-		return errors.New("Expected REQUEST message")
+	if !strings.HasPrefix(nodeAMsg, "PEER-ADD ") {
+		return errors.New("Expected PEER-ADD message")
 	}
 	
 	_, err = nodeA.HandleMessage(nodeAConnInfo, nodeAMsg)
@@ -47,8 +47,8 @@ func TestNodeJoinNetwork() error {
 	if err != nil {
 		return err
 	}
-	if !strings.HasPrefix(nodeBMsg, "ACCEPTED ") {
-		return errors.New("Expected ACCEPTED message")
+	if !strings.HasPrefix(nodeBMsg, "PEER-ACCEPTED ") {
+		return errors.New("Expected PEER-ACCEPTED message")
 	}
 
 	_, err = nodeB.HandleMessage(nodeBConnInfo, nodeBMsg)

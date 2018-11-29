@@ -139,7 +139,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 
 	messageType := args[0]
 
-	if len(args) == 3 && messageType == "REQUEST" {
+	if len(args) == 3 && messageType == "PEER-REQUEST" {
 		// the other peer is requesting the current network to add it as peer
 
 		connInfo.PeerId = args[1]
@@ -156,11 +156,11 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 			} else {
 				// accept requesting peer as peer
 				network.SetPeer(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
-				fmt.Fprintf(connInfo.Conn, "ACCEPTED %s %s\n", network.NodeId, network.NodeAddr)
+				fmt.Fprintf(connInfo.Conn, "PEER-ACCEPTED %s %s\n", network.NodeId, network.NodeAddr)
 				return nil, nil
 			}
 		}
-	} else if len(args) == 3 && messageType == "ACCEPTED" {
+	} else if len(args) == 3 && messageType == "PEER-ACCEPTED" {
 		// the other peer accepted the current network as a peer
 		
 		connInfo.PeerId = args[1]
@@ -180,7 +180,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				return nil, nil
 			}
 		}
-	} else if len(args) == 1 && messageType == "LIST" {
+	} else if len(args) == 1 && messageType == "PEER-LIST" {
 		// the other peer is requesting a list of all the other peers of the current network
 
 		network.PeersLock.RLock()
@@ -188,14 +188,14 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 			if peer.Id == connInfo.PeerId {
 				continue
 			}
-			fmt.Fprintf(connInfo.Conn, "PEER %s %s\n", peer.Id, peer.Addr)
+			fmt.Fprintf(connInfo.Conn, "PEER-ADD %s %s\n", peer.Id, peer.Addr)
 		}
 		network.PeersLock.RUnlock()
 		return nil, nil
 
-	} else if len(args) == 3 && messageType == "PEER" {
+	} else if len(args) == 3 && messageType == "PEER-ADD" {
 		// the other peer sent information about one of his peers, as requested by
-		// the current network with the LIST message
+		// the current network with the PEER-LIST message
 		
 		peerId := args[1]
 		peerAddr := args[2]
@@ -211,7 +211,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				if err != nil {
 					return nil, errors.New("Failed to connect to peer")
 				} else {
-					fmt.Fprintf(conn, "REQUEST %s %s\n", network.NodeId, network.NodeAddr)
+					fmt.Fprintf(conn, "PEER-REQUEST %s %s\n", network.NodeId, network.NodeAddr)
 					return conn, nil
 				}
 			}
@@ -251,13 +251,12 @@ func (network *Network) ReadNextMessage(connInfo *ConnInfo) (string, error) {
 // may return a new connection that must be handled
 func (network *Network) JoinNetwork(peerAddr string) (net.Conn, error) {
 	// the current peer will request to join the network of the target peer
-
 	conn, err := net.Dial("tcp", peerAddr)
 	if err != nil {
 		return nil, errors.New("Failed to connect to peer")
 	} else {
-		fmt.Fprintf(conn, "REQUEST %s %s\n", network.NodeId, network.NodeAddr)
-		fmt.Fprintf(conn, "LIST\n")
+		fmt.Fprintf(conn, "PEER-REQUEST %s %s\n", network.NodeId, network.NodeAddr)
+		fmt.Fprintf(conn, "PEER-LIST\n")
 		return conn, nil
 	}
 }

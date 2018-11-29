@@ -14,10 +14,10 @@ type Node struct {
 
 var node Node // FIXME find some way to share the node between handlers without global...
 
-func NewNode(nodeId string, timestamp int64) *Node {
+func NewNode(nodeId string) *Node {
 	node = Node{
 		network.NewNode(nodeId),
-		blockchain.New(timestamp, []byte{}),
+		&blockchain.BlockChain{},
 	}
 	node.Network.AddHandler("REQUEST-BLOCKCHAIN", HandleRequestBlockchain)
 	node.Network.AddHandler("BLOCK-ADD", HandleBlockAddMessage)
@@ -48,6 +48,11 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		// replace the blockchain of the current node with and empty blockchain
 		// starting with the received block
 		node.BlockChain = blockchain.NewFromBlock(block)
+		fmt.Println("Block added:")
+		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
+		fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
+			block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+		fmt.Println()
 
 	} else if block.Index == node.BlockChain.NextIndex &&
 		block.PreviousHash == node.BlockChain.LastHash {
@@ -56,9 +61,18 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		err = node.BlockChain.AddBlock(block)
 		if err != nil {
 			fmt.Println(err)
+		} else {
+			fmt.Println("Block added:")
+			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
+			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
+				block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+			fmt.Println()
 		}
 
 	} else if block.Index >= node.BlockChain.NextIndex {
+
+		fmt.Println("WARNING: Refreshing blockchain")
+		fmt.Println()
 
 		// the current node is behind the blockchain of the peer,
 		// so request peer to send the full blockchain
@@ -66,11 +80,10 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 
 	} else {
 
-		fmt.Println("WARNING: Ignored Invalid block")
-		fmt.Println("  Index:     ", block.Index)
-		fmt.Println("  Hash:      ", block.Hash().String()[:8])
-		fmt.Println("  Timestamp: ", block.Timestamp)
-		fmt.Println("  Data:      ", string(block.Data))
+		fmt.Println("WARNING: Ignored invalid block:")
+		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
+			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
+				block.PreviousHash.String()[:8], block.Timestamp, block.Data)
 		fmt.Println()
 		
 	}
@@ -139,4 +152,8 @@ func (node *Node) Start() {
 
 func (node *Node) PrintBlocks() {
 	node.BlockChain.PrintBlocks()
+}
+
+func (node *Node) VerifyConsistency() bool {
+	return node.BlockChain.VerifyConsistency()
 }
