@@ -1,5 +1,10 @@
 package network
 
+import (
+	"fmt"
+	"net"
+)
+
 func (network *Network) SetConn(conn net.Conn, connInfo *ConnInfo) {
 	network.ConnsLock.Lock()
 	network.Conns[conn] = connInfo

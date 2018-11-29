@@ -114,7 +114,7 @@ func (node *Node) PrintConns() {
 }
 
 func (node *Node) AddBlockFromData(timestamp int64, data []byte) {
-	node.BlockChain.AddBlockFromData(int64, data)
+	node.BlockChain.AddBlockFromData(timestamp, data)
 }
 
 func (node *Node) Broadcast(msg string) {
