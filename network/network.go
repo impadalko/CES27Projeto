@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"strings"
 	"sync"
+	"errors"
 )
 
 type Peer struct {
@@ -22,6 +23,20 @@ type ConnInfo struct {
 	PeerAddr   string        // the empty string is used when the peerAddr has not been resolved yet
 	Conn       net.Conn
 	Reader     *bufio.Reader
+}
+
+func (connInfo *ConnInfo) SendMessage(message string) error {
+	_, err := fmt.Fprint(connInfo.Conn, message)
+	return err
+}
+
+func (network *Network) SendMessage(peerId string, message string) error {
+	peer, ok := network.PeerGet(peerId)
+	if !ok {
+		return errors.New("Peer not found")
+	}
+	_, err := fmt.Fprint(peer.Conn, message)
+	return err
 }
 
 type Network struct {
@@ -40,6 +55,8 @@ type Network struct {
 	// the native map implementation in Go is not thread-safe.
 	// we may use multiple goroutines that are able to access and modify the same maps concurrently,
 	// so we need locks for synchronization
+
+	Handlers  map[string]func(connInfo *ConnInfo, args []string)
 }
 
 func NewNode(nodeId string) *Network {
@@ -49,6 +66,7 @@ func NewNode(nodeId string) *Network {
 	network.PeersLock = sync.RWMutex{}
 	network.Conns     = map[net.Conn]*ConnInfo{}
 	network.ConnsLock = sync.RWMutex{}
+	network.Handlers = map[string]func(connInfo *ConnInfo, args []string){}
 	return &network
 }
 
@@ -111,13 +129,15 @@ func (err *ProtocolError) Error() string {
 func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.Conn, error) {
 	// received message
 	message = strings.TrimSpace(message)
-	split := strings.Split(message, " ")
+	args := strings.Split(message, " ")
 
-	if len(split) == 3 && split[0] == "REQUEST" {
+	messageType := args[0]
+
+	if len(args) == 3 && messageType == "REQUEST" {
 		// the other peer is requesting the current network to add it as peer
 
-		connInfo.PeerId = split[1]
-		connInfo.PeerAddr = split[2]
+		connInfo.PeerId = args[1]
+		connInfo.PeerAddr = args[2]
 
 		if connInfo.PeerId == network.NodeId {
 			connInfo.Conn.Close()
@@ -134,11 +154,11 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				return nil, nil
 			}
 		}
-	} else if len(split) == 3 && split[0] == "ACCEPTED" {
+	} else if len(args) == 3 && messageType == "ACCEPTED" {
 		// the other peer accepted the current network as a peer
 		
-		connInfo.PeerId = split[1]
-		connInfo.PeerAddr = split[2]
+		connInfo.PeerId = args[1]
+		connInfo.PeerAddr = args[2]
 
 		if connInfo.PeerId == network.NodeId {
 			connInfo.Conn.Close()
@@ -154,7 +174,7 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				return nil, nil
 			}
 		}
-	} else if len(split) == 1 && split[0] == "LIST" {
+	} else if len(args) == 1 && messageType == "LIST" {
 		// the other peer is requesting a list of all the other peers of the current network
 
 		network.PeersLock.RLock()
@@ -167,12 +187,12 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 		network.PeersLock.RUnlock()
 		return nil, nil
 
-	} else if len(split) == 3 && split[0] == "PEER" {
+	} else if len(args) == 3 && messageType == "PEER" {
 		// the other peer sent information about one of his peers, as requested by
 		// the current network with the LIST message
 		
-		peerId := split[1]
-		peerAddr := split[2]
+		peerId := args[1]
+		peerAddr := args[2]
 
 		if peerId == network.NodeId {
 			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
@@ -190,8 +210,12 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 				}
 			}
 		}
+	} else if handler, ok := network.Handlers[messageType]; ok {
+		handler(connInfo, args)
+	} else {
+		return nil, &ProtocolError{"InvalidMessage", "The message is invalid"}
 	}
-	return nil, &ProtocolError{"InvalidMessage", "The message is invalid"}
+	return nil, nil
 }
 
 // connections are handled concurrently to each other and stay open during the lifetime of the newtork
@@ -289,15 +313,6 @@ func (network *Network) GetPeers() []Peer {
 	return peers
 }
 
-/*func (network *Network) GetConns() []ConnInfo {
-	network.ConnsLock.RLock()
-	conns := make([]ConnInfo, len(network.Conns))
-	i := 0
-	for conn, connInfo := range network.Conns {
-		conns[i] = *connInfo
-		conns[i].reader = nil
-		i++
-	}
-	network.ConnsLock.RUnlock()
-	return conns
-}*/
+func (network *Network) AddHandler(messageType string, handler func(connInfo *ConnInfo, args []string)) {
+	network.Handlers[messageType] = handler
+}

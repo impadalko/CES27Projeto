@@ -11,14 +11,14 @@ import (
 )
 
 func main() {
-	node := network.NewNode(util.RandomString(8))
+	node := NewNode(util.RandomString(8), util.Now())
 	err := node.Listen()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println("NodeId:  ", node.NodeId)
-	fmt.Println("NodeAddr:", node.NodeAddr)
+	fmt.Println("NodeId:  ", node.NodeId())
+	fmt.Println("NodeAddr:", node.NodeAddr())
 	fmt.Println()
 	
 	if len(os.Args) == 2 {
@@ -28,6 +28,7 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		fmt.Fprintf(conn, "BLOCKCHAIN\n")
 		go node.StartHandleConnection(conn)
 	}
 
