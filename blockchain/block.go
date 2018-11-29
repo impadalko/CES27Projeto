@@ -3,13 +3,9 @@ package blockchain
 import (
 	"crypto/sha256"
 	"crypto/rsa"
-	"encoding/json"
 	"encoding/hex"
 	"encoding/binary"
 	"bytes"
-
-
-	"github.com/impadalko/CES27Projeto/sign"
 )
 
 // SHA-256 outputs 256 bits (32 bytes)
@@ -73,11 +69,13 @@ func BlockFromString(str string) (Block, error) {
 }
 
 func (block Block) VerifyData() error {
+	return nil
+	/*
 	var signedData SignedData
 	err := json.Unmarshall(block.Data, signedData)
 	if err != nil {
 		return err
 	}
-	err = sign.Verify(signedData.PubKey, sign.Hash(signedData.Payload), signedData.signature)
-	return err
+	err = sign.Verify(signedData.PubKey, sign.Hash(signedData.Payload), signedData.Signature)
+	return err*/
 }

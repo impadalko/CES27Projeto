@@ -28,7 +28,7 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(conn, "BLOCKCHAIN\n")
+		fmt.Fprintf(conn, "REQUEST-BLOCKCHAIN\n")
 		go node.StartHandleConnection(conn)
 	} else {
 		for i := 0; i < 10; i++ {

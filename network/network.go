@@ -118,15 +118,6 @@ func (network *Network) Close() error {
 	return network.Listener.Close()
 }
 
-type ProtocolError struct {
-	code string
-	msg string
-}
-
-func (err *ProtocolError) Error() string {
-	return fmt.Sprintf("%s: %s", err.code, err.msg)
-}
-
 // may return a new connection that must be handled
 func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.Conn, error) {
 	// received message
@@ -143,12 +134,12 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 
 		if connInfo.PeerId == network.NodeId {
 			connInfo.Conn.Close()
-			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
+			return nil, errors.New("SelfPeer: Can't add itself as peer")
 		} else {
 			_, ok := network.GetPeer(connInfo.PeerId)
 			if ok {
 				connInfo.Conn.Close()
-				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
+				return nil, errors.New("AlreadyPeer: Requesting peer is already a peer")
 			} else {
 				// accept requesting peer as peer
 				network.SetPeer(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
@@ -164,12 +155,12 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 
 		if connInfo.PeerId == network.NodeId {
 			connInfo.Conn.Close()
-			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
+			return nil, errors.New("SelfPeer: Can't add itself as peer")
 		} else {
 			_, ok := network.GetPeer(connInfo.PeerId)
 			if ok {
 				connInfo.Conn.Close()
-				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
+				return nil, errors.New("AlreadyPeer: Requesting peer is already a peer")
 			} else {
 				// add accepting peer as peer
 				network.SetPeer(connInfo.PeerId, Peer{connInfo.PeerId, connInfo.PeerAddr, connInfo.Conn})
@@ -197,15 +188,15 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 		peerAddr := args[2]
 
 		if peerId == network.NodeId {
-			return nil, &ProtocolError{"SelfPeer", "Can't add itself as peer"}
+			return nil, errors.New("SelfPeer: Can't add itself as peer")
 		} else {
 			_, ok := network.GetPeer(peerId)
 			if ok {
-				return nil, &ProtocolError{"AlreadyPeer", "Requesting peer is already a peer"}
+				return nil, errors.New("AlreadyPeer: Requesting peer is already a peer")
 			} else {
 				conn, err := net.Dial("tcp", peerAddr)
 				if err != nil {
-					return nil, &ProtocolError{"FailConnect", "Failed to connect to peer"}
+					return nil, errors.New("FailConnect: Failed to connect to peer")
 				} else {
 					fmt.Fprintf(conn, "REQUEST %s %s\n", network.NodeId, network.NodeAddr)
 					return conn, nil
@@ -215,7 +206,8 @@ func (network *Network) HandleMessage(connInfo *ConnInfo, message string) (net.C
 	} else if handler, ok := network.GetHandler(messageType); ok {
 		handler(connInfo, args)
 	} else {
-		return nil, &ProtocolError{"InvalidMessage", "The message is invalid"}
+		errorMessage := fmt.Sprintf("InvalidMessage: The message type %s is invalid", messageType)
+		return nil, errors.New(errorMessage)
 	}
 	return nil, nil
 }
@@ -295,7 +287,7 @@ func (network *Network) JoinNetwork(peerAddr string) (net.Conn, error) {
 
 	conn, err := net.Dial("tcp", peerAddr)
 	if err != nil {
-		return nil, &ProtocolError{"FailConnect", "Failed to connect to peer"}
+		return nil, errors.New("FailConnect: Failed to connect to peer")
 	} else {
 		fmt.Fprintf(conn, "REQUEST %s %s\n", network.NodeId, network.NodeAddr)
 		fmt.Fprintf(conn, "LIST\n")
