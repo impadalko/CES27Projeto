@@ -4,13 +4,18 @@ import (
 	"fmt"
 	"net"
 	"crypto/rsa"
+	"encoding/hex"
+
 	"github.com/impadalko/CES27Projeto/blockchain"
 	"github.com/impadalko/CES27Projeto/network"
+	"github.com/impadalko/CES27Projeto/util"
 )
 
 type Node struct {
 	Network    *network.Network
 	BlockChain *blockchain.BlockChain
+
+	KeyName    string
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
 }
@@ -21,6 +26,7 @@ func NewNode(nodeId string) *Node {
 	node = Node{
 		network.NewNode(nodeId),
 		&blockchain.BlockChain{},
+		"",		
 		nil,
 		nil,
 	}
@@ -53,10 +59,11 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		// replace the blockchain of the current node with and empty blockchain
 		// starting with the received block
 		node.BlockChain = blockchain.NewFromBlock(block)
+		hexData := util.HexString(hex.EncodeToString(block.Data))
 		fmt.Println("Block added:")
 		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 		fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-			block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+			block.PreviousHash.String()[:8], block.Timestamp, hexData)
 		fmt.Println()
 
 	} else if block.Index == node.BlockChain.NextIndex &&
@@ -67,10 +74,11 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
+			hexData := util.HexString(hex.EncodeToString(block.Data))
 			fmt.Println("Block added:")
 			fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-				block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+				block.PreviousHash.String()[:8], block.Timestamp, hexData)
 			fmt.Println()
 		}
 
@@ -84,11 +92,11 @@ func HandleBlockAddMessage(connInfo *network.ConnInfo, args []string) {
 		connInfo.SendMessage("REQUEST-BLOCKCHAIN\n")
 
 	} else {
-
+		hexData := util.HexString(hex.EncodeToString(block.Data))
 		fmt.Println("WARNING: Ignored invalid block:")
 		fmt.Printf("%5s %-8s %-8s %-10s %s\n", "Index", "Hash", "PrevHash", "Timestamp", "Data")
 			fmt.Printf("%5d %8s %8s %10d %s\n", block.Index, block.Hash().String()[:8],
-				block.PreviousHash.String()[:8], block.Timestamp, block.Data)
+				block.PreviousHash.String()[:8], block.Timestamp, hexData)
 		fmt.Println()
 		
 	}
@@ -163,16 +171,18 @@ func (node *Node) VerifyConsistency() bool {
 	return node.BlockChain.VerifyConsistency()
 }
 
-func (node *Node) UsePrivateKey(privateKey *rsa.PrivateKey) {
+func (node *Node) UsePrivateKey(keyName string, privateKey *rsa.PrivateKey) {
+	node.KeyName = keyName
 	node.PrivateKey = privateKey
 	node.PublicKey = &privateKey.PublicKey
 }
 
-func (node *Node) UsePublicKey(publicKey *rsa.PublicKey) {
+func (node *Node) UsePublicKey(keyName string, publicKey *rsa.PublicKey) {
+	node.KeyName = keyName
 	node.PrivateKey = nil
 	node.PublicKey = publicKey
 }
 
-func (node *Node) GetBlock(index int64) blockchain.Block {
+func (node *Node) GetBlock(index int64) (blockchain.Block, error) {
 	return node.BlockChain.GetBlock(index)
 }

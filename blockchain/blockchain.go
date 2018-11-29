@@ -92,9 +92,12 @@ func (bc *BlockChain) PrintBlocks() {
 	bc.Lock.RUnlock()
 }
 
-func (bc *BlockChain) GetBlock(index int64) Block {
+func (bc *BlockChain) GetBlock(index int64) (Block, error) {
 	bc.Lock.RLock()
+	if index < 0 || index >= int64(len(bc.Blocks)) {
+		return Block{}, errors.New("Array Out of Bounds")
+	}
 	block := bc.Blocks[index]
 	bc.Lock.RUnlock()
-	return block
+	return block, nil
 }

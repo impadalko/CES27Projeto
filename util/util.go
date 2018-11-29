@@ -28,3 +28,10 @@ func RandomString(length int) string {
 func Now() int64 {
 	return time.Now().Unix()
 }
+
+func HexString(h string) string {
+	if len(h) > 8 {
+		return h[:8]
+	}
+	return h
+}

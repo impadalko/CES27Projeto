@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
-	"bufio"
-	"strings"
 	"strconv"
-	"encoding/hex"
+	"strings"
 
 	"github.com/impadalko/CES27Projeto/blockchain"
 	"github.com/impadalko/CES27Projeto/network"
@@ -60,151 +61,159 @@ func main() {
 
 		command := split[0]
 
-		if command == "info" {
-
-			node.PrintInfo()
-
-		} else if command == "peers" {
-
-			node.PrintPeers()
-
-		} else if command == "conns" {
-
-			node.PrintConns()
-
-		} else if command == "blocks" {
-
-			node.PrintBlocks()
-
-		} else if len(split) >= 2 && command == "add" {
-
-			message := strings.Join(split[1:], " ")
-			node.AddBlockFromData(util.Now(), []byte(message))
-			node.PrintBlocks()
-
-		} else if len(split) == 2 && command == "cast" {
-
-			blockIndex, err := strconv.ParseInt(split[1], 10, 64)
-			if err == nil {
-				block := node.BlockChain.GetBlock(blockIndex)
-				message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
-				node.Broadcast(message)
-			} else {
-				fmt.Println("Invalid command")
-				fmt.Println()
-			}
-
-		} else if len(split) == 1 && command == "verify" {
-
-			if node.VerifyConsistency() {
-				fmt.Println("The blockchain is consistent")
-				fmt.Println()
-			} else {
-				fmt.Println("The blockchain is NOT consistent")
-				fmt.Println()
-			}
-
-		} else if len(split) == 2 && command == "genkey" {
-
-			privKey, err := sign.GenerateKey()
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				pubKey := &privKey.PublicKey
-				keyName := split[1]
-				privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
-				publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
-				sign.WritePrivateKeyToPemFile(privKey, privateFilename)
-				sign.WritePublicKeyToPemFile(pubKey, publicFilename)
-				fmt.Printf("Generated private key %s saved to %s\n", keyName, privateFilename)
-				fmt.Printf("Generated public key %s saved to %s\n", keyName, publicFilename)
-				fmt.Println()
-			}
-		
-		} else if len(split) == 2 && command == "privkey" {
-
-			keyName := split[1]
-			privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
-			privKey, err := sign.PrivateKeyFromPemFile(privateFilename)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				node.UsePrivateKey(privKey)
-				fmt.Println("Using private key:", keyName)
-				fmt.Println()
-			}
-
-		} else if len(split) == 2 && command == "pubkey" {
-
-			keyName := split[1]
-			publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
-			pubKey, err := sign.PublicKeyFromPemFile(publicFilename)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				node.UsePublicKey(pubKey)
-				fmt.Println("Using public key:", keyName)
-				fmt.Println()
-			}
-
-		} else if len(split) == 2 && command == "sign" {
-
-			if node.PrivateKey == nil {
-				fmt.Println("Please use a private key with privkey command")
-				fmt.Println()
-			} else {
-				hash, err := hex.DecodeString(split[1])
-				if err != nil {
-					fmt.Println("Invalid hash")
-					fmt.Println()
-				} else {
-					signature, err := sign.Sign(node.PrivateKey, hash)
-					if err != nil {
-						fmt.Println(err)
-						fmt.Println()
-					} else {
-						fmt.Println("Signature added to the blockchain")
-						fmt.Println()
-						node.AddBlockFromData(util.Now(), signature)
-					}
-				}
-			}
-
-		} else if len(split) == 3 && command == "verify" {
-			
-			if node.PublicKey == nil {
-				fmt.Println("Please use a public key with pubkey command")
-				fmt.Println()
-			} else {
-				blockIndex, err := strconv.ParseInt(split[1], 10, 64)
-				if err != nil {
-					fmt.Println("Invalid hash")
-					fmt.Println()
-				} else {
-					hash, err := hex.DecodeString(split[2])
-					if err != nil {
-						fmt.Println("Invalid hash")
-						fmt.Println()
-					} else {
-						block := node.GetBlock(blockIndex)
-						signature := block.Data
-						err := sign.Verify(node.PublicKey, hash, signature)
-						if err != nil {
-							fmt.Println("The signature is INVALID")
-							fmt.Println()
-						} else {
-							fmt.Println("The signature is VALID")
-							fmt.Println()
-						}
-					}
-				}
-			}
-
-		} else {
-			fmt.Println("Invalid command")
+		err = HandleCommand(command, split)
+		if err != nil {
+			fmt.Println(err)
 			fmt.Println()
 		}
 	}
+}
+
+func HandleCommand(command string, split []string) error {
+	
+	if command == "info" {
+
+		node.PrintInfo()
+
+	} else if command == "peers" {
+
+		node.PrintPeers()
+
+	} else if command == "conns" {
+
+		node.PrintConns()
+
+	} else if command == "blocks" {
+
+		node.PrintBlocks()
+
+	} else if len(split) >= 2 && command == "add" {
+
+		message := strings.Join(split[1:], " ")
+		node.AddBlockFromData(util.Now(), []byte(message))
+		node.PrintBlocks()
+
+	} else if len(split) == 2 && command == "cast" {
+
+		blockIndex, err := strconv.ParseInt(split[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		block, err := node.BlockChain.GetBlock(blockIndex)
+		if err != nil {
+			return err
+		}
+		message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
+		node.Broadcast(message)
+
+	} else if len(split) == 1 && command == "verify" {
+
+		if node.VerifyConsistency() {
+			fmt.Println("The blockchain is consistent")
+			fmt.Println()
+		} else {
+			fmt.Println("The blockchain is NOT consistent")
+			fmt.Println()
+		}
+
+	} else if len(split) == 2 && command == "genkey" {
+
+		privKey, err := sign.GenerateKey()
+		if err != nil {
+			return err
+		}
+		pubKey := &privKey.PublicKey
+		keyName := split[1]
+		
+		privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
+		err = sign.WritePrivateKeyToPemFile(privKey, privateFilename)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Generated private key %s saved to %s\n", keyName, privateFilename)
+		fmt.Println()
+
+		publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
+		err = sign.WritePublicKeyToPemFile(pubKey, publicFilename)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Generated public key %s saved to %s\n", keyName, publicFilename)
+		fmt.Println()
+	
+	} else if len(split) == 2 && command == "privkey" {
+
+		keyName := split[1]
+		privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
+		privKey, err := sign.PrivateKeyFromPemFile(privateFilename)
+		if err != nil {
+			return err
+		}
+		node.UsePrivateKey(keyName, privKey)
+		fmt.Println("Using private key:", keyName)
+		fmt.Println()
+
+	} else if len(split) == 2 && command == "pubkey" {
+
+		keyName := split[1]
+		publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
+		pubKey, err := sign.PublicKeyFromPemFile(publicFilename)
+		if err != nil {
+			return err
+		}
+		node.UsePublicKey(keyName, pubKey)
+		fmt.Println("Using public key:", keyName)
+		fmt.Println()
+
+	} else if len(split) == 2 && command == "sign" {
+
+		if node.PrivateKey == nil {
+			return errors.New("Please use a private key with privkey command")
+		}
+		hash, err := hex.DecodeString(split[1])
+		if err != nil {
+			return err
+		}
+		signature, err := sign.Sign(node.PrivateKey, hash)
+		if err != nil {
+			return err
+		}
+		node.AddBlockFromData(util.Now(), signature)
+		fmt.Printf("The document with hash %s was signed with key %s and added to the blockchain\n\n", 
+			util.HexString(split[1]), node.KeyName)
+
+	} else if len(split) == 3 && command == "verify" {
+		
+		if node.PublicKey == nil {
+			return errors.New("Please use a public key with pubkey command")
+		}
+		blockIndex, err := strconv.ParseInt(split[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		hash, err := hex.DecodeString(split[2])
+		if err != nil {
+			return err
+		}
+		block, err := node.GetBlock(blockIndex)
+		if err != nil {
+			return err
+		}
+		signature := block.Data
+		err = sign.Verify(node.PublicKey, hash, signature)
+		if err != nil {
+			fmt.Println("The signature is INVALID")
+			fmt.Println()
+		} else {
+			fmt.Println("The signature is VALID")
+			fmt.Printf("The document with hash %s was signed by %s in the block %d\n\n",
+				util.HexString(split[2]), node.KeyName, blockIndex)
+		}
+
+	} else {
+		return errors.New("Invalid Command")
+	}
+	return nil
 }
 
 func Tests() {
