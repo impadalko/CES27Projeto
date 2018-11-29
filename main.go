@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"io/ioutil"
 
 	"github.com/impadalko/CES27Projeto/blockchain"
 	"github.com/impadalko/CES27Projeto/network"
@@ -16,6 +17,8 @@ import (
 )
 
 func main() {
+	//Tests()
+
 	node := NewNode(util.RandomString(8))
 	err := node.Listen()
 	if err != nil {
@@ -72,28 +75,37 @@ func main() {
 func HandleCommand(command string, split []string) error {
 	
 	if command == "info" {
+		// Display node id and node address
 
 		node.PrintInfo()
 
 	} else if command == "peers" {
+		// Display the list of peers of the node
 
 		node.PrintPeers()
 
 	} else if command == "conns" {
+		// Display the list of connections of the node
 
 		node.PrintConns()
 
 	} else if command == "blocks" {
+		// Display the list of blocks of the blockchain
 
 		node.PrintBlocks()
 
 	} else if len(split) >= 2 && command == "add" {
+		// Add a new block to the blockchain with a supplied hex string
 
-		message := strings.Join(split[1:], " ")
-		node.AddBlockFromData(util.Now(), []byte(message))
+		data, err := hex.DecodeString(split[1])
+		if err != nil {
+			return err
+		}
+		node.AddBlockFromData(util.Now(), data)
 		node.PrintBlocks()
 
 	} else if len(split) == 2 && command == "cast" {
+		// Broadcast a block to all the peers
 
 		blockIndex, err := strconv.ParseInt(split[1], 10, 64)
 		if err != nil {
@@ -106,17 +118,8 @@ func HandleCommand(command string, split []string) error {
 		message := fmt.Sprintf("BLOCK-ADD %s\n", block.String())
 		node.Broadcast(message)
 
-	} else if len(split) == 1 && command == "verify" {
-
-		if node.VerifyConsistency() {
-			fmt.Println("The blockchain is consistent")
-			fmt.Println()
-		} else {
-			fmt.Println("The blockchain is NOT consistent")
-			fmt.Println()
-		}
-
 	} else if len(split) == 2 && command == "genkey" {
+		// generate a private/public key pair
 
 		privKey, err := sign.GenerateKey()
 		if err != nil {
@@ -130,18 +133,18 @@ func HandleCommand(command string, split []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Generated private key %s saved to %s\n", keyName, privateFilename)
-		fmt.Println()
+		fmt.Printf("Generated private key %s written to %s\n", keyName, privateFilename)
 
 		publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
 		err = sign.WritePublicKeyToPemFile(pubKey, publicFilename)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Generated public key %s saved to %s\n", keyName, publicFilename)
+		fmt.Printf("Generated public key %s written to %s\n", keyName, publicFilename)
 		fmt.Println()
 	
 	} else if len(split) == 2 && command == "privkey" {
+		// use a supplied private key for signing and verification
 
 		keyName := split[1]
 		privateFilename := fmt.Sprintf("%s_priv.pem", keyName)
@@ -154,6 +157,7 @@ func HandleCommand(command string, split []string) error {
 		fmt.Println()
 
 	} else if len(split) == 2 && command == "pubkey" {
+		// use a supplied public key for signing and verification
 
 		keyName := split[1]
 		publicFilename := fmt.Sprintf("%s_pub.pem", keyName)
@@ -166,6 +170,7 @@ func HandleCommand(command string, split []string) error {
 		fmt.Println()
 
 	} else if len(split) == 2 && command == "sign" {
+		// sign a hash using the current private key and add the signature to the blockchain
 
 		if node.PrivateKey == nil {
 			return errors.New("Please use a private key with privkey command")
@@ -183,6 +188,8 @@ func HandleCommand(command string, split []string) error {
 			util.HexString(split[1]), node.KeyName)
 
 	} else if len(split) == 3 && command == "verify" {
+		// verify a signature present in the blockchain using a supplied hash
+		// and the current public key
 		
 		if node.PublicKey == nil {
 			return errors.New("Please use a public key with pubkey command")
@@ -210,8 +217,23 @@ func HandleCommand(command string, split []string) error {
 				util.HexString(split[2]), node.KeyName, blockIndex)
 		}
 
+	} else if len(split) == 2 && command == "hash" {
+		// return the SHA256 hash of a file, given its filename
+		
+		filename := split[1]
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return err
+		}
+		hash := sign.Hash(data)
+		fmt.Println("The SHA256 hash of the file given is:")
+		fmt.Println(hex.EncodeToString(hash))
+		fmt.Println()
+
 	} else {
+
 		return errors.New("Invalid Command")
+
 	}
 	return nil
 }
